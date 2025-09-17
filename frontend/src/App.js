@@ -630,7 +630,8 @@ function App() {
                       </TableCell>
                     </TableRow>
                   ))}
-                </Table>
+                </TableBody>
+              </Table>
               </ScrollArea>
             </DialogContent>
           </Dialog>
