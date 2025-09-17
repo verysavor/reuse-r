@@ -652,16 +652,6 @@ async def export_results(scan_id: str):
     
     return FileResponse(filepath, filename=filename, media_type='application/json')
 
-@api_router.get("/test/backend-verification")
-async def verify_backend():
-    """Test endpoint to verify our custom backend is running"""
-    return {
-        "message": "Custom Bitcoin Reused-R Scanner Backend is running",
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "version": "1.0.0-custom",
-        "unique_id": "reused-r-scanner-custom-backend-2025"
-    }
-
 @api_router.get("/scan/list")
 async def list_scans():
     """List all scans"""
@@ -673,10 +663,11 @@ async def list_scans():
             "start_block": state["config"]["start_block"],
             "end_block": state["config"]["end_block"],
             "keys_recovered": state["keys_recovered"],
-            "created_at": state["created_at"]
+            "created_at": state["created_at"],
+            "backend_verification": "custom-backend-confirmed"  # Unique marker
         })
     
-    return {"scans": scans}
+    return {"scans": scans, "total_scans": len(scans), "backend_type": "custom-reused-r-scanner"}
 
 # Include the router in the main app
 app.include_router(api_router)
