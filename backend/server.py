@@ -524,6 +524,9 @@ async def start_scan(config: ScanConfig, background_tasks: BackgroundTasks):
         if config.end_block <= config.start_block:
             raise HTTPException(status_code=400, detail="End block must be greater than start block")
         
+        if not config.address_types:
+            raise HTTPException(status_code=400, detail="At least one address type must be selected")
+        
         # Initialize scan state
         scan_states[config.scan_id] = {
             "config": config.dict(),
