@@ -15,6 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { ScrollArea } from './components/ui/scroll-area';
 import { Separator } from './components/ui/separator';
 import { toast } from 'sonner';
+import { Toaster } from './components/ui/sonner';
 import { 
   Search, 
   Play, 
