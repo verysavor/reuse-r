@@ -652,6 +652,16 @@ async def export_results(scan_id: str):
     
     return FileResponse(filepath, filename=filename, media_type='application/json')
 
+@api_router.get("/test/backend-verification")
+async def verify_backend():
+    """Test endpoint to verify our custom backend is running"""
+    return {
+        "message": "Custom Bitcoin Reused-R Scanner Backend is running",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "version": "1.0.0-custom",
+        "unique_id": "reused-r-scanner-custom-backend-2025"
+    }
+
 @api_router.get("/scan/list")
 async def list_scans():
     """List all scans"""
