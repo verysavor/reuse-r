@@ -635,7 +635,6 @@ function App() {
               </ScrollArea>
             </DialogContent>
           </Dialog>
-        </Dialog>
 
         {/* Footer */}
         <div className="text-center text-sm text-slate-500 space-y-2">
