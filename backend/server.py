@@ -695,9 +695,14 @@ async def start_scan(config: ScanConfig, background_tasks: BackgroundTasks):
             "r_reuse_pairs": 0,
             "keys_recovered": 0,
             "progress_percentage": 0.0,
+            "blocks_per_minute": 0.0,
+            "estimated_time_remaining": "unknown",
+            "api_calls_made": 0,
+            "errors_encountered": 0,
             "logs": [],
             "recovered_keys": [],
-            "created_at": datetime.now(timezone.utc)
+            "created_at": datetime.now(timezone.utc),
+            "started_at": datetime.now(timezone.utc)
         }
         
         # Start scan in background
