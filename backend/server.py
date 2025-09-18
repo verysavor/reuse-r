@@ -844,20 +844,20 @@ async def test_cryptoapis():
     if not api.cryptoapis_key:
         return test_results
     
-    # Test 1: Get blockchain info
+    # Test 1: Get latest block info
     try:
-        url = f"{api.cryptoapis_base}/info"
+        url = f"{api.cryptoapis_base}/blocks/last"
         headers = {
             "x-api-key": api.cryptoapis_key,
             "Content-Type": "application/json"
         }
         result = await api.make_request(url, headers)
-        test_results["tests"]["blockchain_info"] = {
+        test_results["tests"]["latest_block"] = {
             "success": result is not None,
             "data": result
         }
     except Exception as e:
-        test_results["tests"]["blockchain_info"] = {
+        test_results["tests"]["latest_block"] = {
             "success": False,
             "error": str(e)
         }
