@@ -525,7 +525,7 @@ class RValueScanner:
         self.max_concurrent_transactions = 100  # High transaction concurrency
     
     async def scan_blocks(self, scan_id: str, start_block: int, end_block: int, address_types: List[str]):
-        """Main scanning function with simplified sequential block processing"""
+        """Main scanning function with high-speed parallel block processing and instant updates"""
         try:
             # Set status to running
             scan_states[scan_id]["status"] = "running"
@@ -533,53 +533,69 @@ class RValueScanner:
             total_blocks = end_block - start_block + 1
             signatures_by_r = {}  # Store signatures grouped by R value
             
-            await self.add_log(scan_id, f"Starting scan from block {start_block} to {end_block} ({total_blocks} blocks)")
+            await self.add_log(scan_id, f"Starting high-speed scan from block {start_block} to {end_block} ({total_blocks} blocks)")
             
-            # Process blocks sequentially but with parallel transaction processing within each block
-            semaphore = asyncio.Semaphore(self.max_concurrent_transactions)
+            # Process blocks in parallel with controlled concurrency for maximum speed
+            block_semaphore = asyncio.Semaphore(self.max_concurrent_blocks)
             
-            for current_block in range(start_block, end_block + 1):
+            async def process_block_with_progress(block_num):
+                """Process a single block and update progress instantly"""
                 try:
-                    await self.add_log(scan_id, f"Processing block {current_block}...")
-                    
-                    # Process single block
-                    block_result = await self.process_single_block(semaphore, scan_id, current_block, address_types)
-                    
-                    if isinstance(block_result, dict) and 'signatures' in block_result:
-                        block_signatures = block_result['signatures']
+                    async with block_semaphore:
+                        # Process block
+                        tx_semaphore = asyncio.Semaphore(self.max_concurrent_transactions)
+                        block_result = await self.process_single_block(tx_semaphore, scan_id, block_num, address_types)
                         
-                        # Group signatures by R value
-                        for sig in block_signatures:
-                            r_value = sig.get('r')
-                            if r_value:
-                                if r_value not in signatures_by_r:
-                                    signatures_by_r[r_value] = []
-                                signatures_by_r[r_value].append(sig)
-                        
-                        # Update progress immediately after each block
-                        blocks_processed = current_block - start_block + 1
-                        scan_states[scan_id]["blocks_scanned"] = blocks_processed
-                        scan_states[scan_id]["current_block"] = current_block
-                        scan_states[scan_id]["progress_percentage"] = (blocks_processed / total_blocks) * 100
-                        scan_states[scan_id]["signatures_found"] += len(block_signatures)
-                        
-                        await self.add_log(scan_id, f"Block {current_block} complete: {len(block_signatures)} signatures found")
-                        
-                    else:
-                        await self.add_log(scan_id, f"Block {current_block} failed or returned no data", "warning")
-                        scan_states[scan_id]["errors_encountered"] = scan_states[scan_id].get("errors_encountered", 0) + 1
-                
+                        if isinstance(block_result, dict) and 'signatures' in block_result:
+                            block_signatures = block_result['signatures']
+                            
+                            # Update progress instantly after each block completes
+                            blocks_processed = scan_states[scan_id]["blocks_scanned"] + 1
+                            scan_states[scan_id]["blocks_scanned"] = blocks_processed
+                            scan_states[scan_id]["current_block"] = block_num
+                            scan_states[scan_id]["progress_percentage"] = (blocks_processed / total_blocks) * 100
+                            scan_states[scan_id]["signatures_found"] += len(block_signatures)
+                            
+                            await self.add_log(scan_id, f"Block {block_num} complete: {len(block_signatures)} signatures found ({blocks_processed}/{total_blocks} blocks)")
+                            
+                            return block_signatures
+                        else:
+                            await self.add_log(scan_id, f"Block {block_num} failed or returned no data", "warning")
+                            scan_states[scan_id]["errors_encountered"] = scan_states[scan_id].get("errors_encountered", 0) + 1
+                            return []
+                            
                 except Exception as e:
-                    await self.add_log(scan_id, f"Error processing block {current_block}: {str(e)}", "error")
+                    await self.add_log(scan_id, f"Error processing block {block_num}: {str(e)}", "error")
                     scan_states[scan_id]["errors_encountered"] = scan_states[scan_id].get("errors_encountered", 0) + 1
-                
-                # No delay - maximum speed processing
+                    return []
+            
+            # Create tasks for all blocks to process in parallel
+            block_tasks = [
+                asyncio.create_task(process_block_with_progress(block_num))
+                for block_num in range(start_block, end_block + 1)
+            ]
+            
+            # Process all blocks and collect results as they complete
+            for completed_task in asyncio.as_completed(block_tasks):
+                try:
+                    block_signatures = await completed_task
+                    
+                    # Group signatures by R value as they come in
+                    for sig in block_signatures:
+                        r_value = sig.get('r')
+                        if r_value:
+                            if r_value not in signatures_by_r:
+                                signatures_by_r[r_value] = []
+                            signatures_by_r[r_value].append(sig)
+                            
+                except Exception as e:
+                    logger.error(f"Error processing block task: {e}")
             
             # Find reused R values and recover private keys
             await self.find_reused_r_values(scan_id, signatures_by_r)
             
             scan_states[scan_id]["status"] = "completed"
-            await self.add_log(scan_id, f"Scan completed! Processed {scan_states[scan_id]['blocks_scanned']} blocks, found {scan_states[scan_id]['keys_recovered']} private keys", "success")
+            await self.add_log(scan_id, f"High-speed scan completed! Processed {scan_states[scan_id]['blocks_scanned']} blocks, found {scan_states[scan_id]['keys_recovered']} private keys", "success")
             
         except Exception as e:
             logger.error(f"Scan error: {e}")
