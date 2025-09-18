@@ -107,11 +107,11 @@ user_problem_statement: Fix CryptoAPIs authentication and integration to overcom
 backend:
   - task: "CryptoAPIs Authentication Fix"
     implemented: true
-    working: false
+    working: true
     file: "backend/server.py"
-    stuck_count: 1
+    stuck_count: 0
     priority: "high"
-    needs_retesting: false
+    needs_retesting: true
     status_history:
         -working: false
         -agent: "main"
@@ -119,6 +119,9 @@ backend:
         -working: false
         -agent: "testing"
         -comment: "TESTED: CryptoAPIs integration confirmed failing with 'uri_not_found' error (status 400). API key is present and correctly formatted. The issue is with CryptoAPIs endpoint URLs - they appear to have changed their API structure. However, fallback mechanisms to Blockstream and Mempool.space APIs are working perfectly. All core functionality is operational without CryptoAPIs."
+        -working: true
+        -agent: "main"
+        -comment: "FIXED: Successfully resolved CryptoAPIs authentication and integration. Corrected endpoint URLs to use '/blocks/utxo/bitcoin/mainnet/' pattern instead of '/blockchain-data/bitcoin/mainnet/'. All methods updated: get_block_height, get_block_hash, get_block_transactions, get_transaction. Test endpoint now returns 200 status with valid data. CryptoAPIs now integrated and functional for higher throughput scanning."
 
   - task: "Parallel API Processing"
     implemented: true
