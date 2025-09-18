@@ -721,11 +721,33 @@ async def start_scan(config: ScanConfig, background_tasks: BackgroundTasks):
 
 @api_router.get("/scan/progress/{scan_id}")
 async def get_scan_progress(scan_id: str):
-    """Get scan progress"""
+    """Get scan progress with performance metrics"""
     if scan_id not in scan_states:
         raise HTTPException(status_code=404, detail="Scan not found")
     
     state = scan_states[scan_id]
+    
+    # Calculate performance metrics
+    current_time = datetime.now(timezone.utc)
+    started_at = state.get("started_at", current_time)
+    elapsed_seconds = (current_time - started_at).total_seconds()
+    
+    blocks_per_minute = 0.0
+    estimated_time_remaining = "unknown"
+    
+    if elapsed_seconds > 0 and state["blocks_scanned"] > 0:
+        blocks_per_minute = (state["blocks_scanned"] / elapsed_seconds) * 60
+        
+        if blocks_per_minute > 0:
+            remaining_blocks = state["total_blocks"] - state["blocks_scanned"]
+            remaining_minutes = remaining_blocks / blocks_per_minute
+            
+            if remaining_minutes < 60:
+                estimated_time_remaining = f"{remaining_minutes:.1f} minutes"
+            else:
+                hours = remaining_minutes / 60
+                estimated_time_remaining = f"{hours:.1f} hours"
+    
     return ScanProgress(
         scan_id=scan_id,
         status=state["status"],
@@ -736,6 +758,10 @@ async def get_scan_progress(scan_id: str):
         r_reuse_pairs=state["r_reuse_pairs"],
         keys_recovered=state["keys_recovered"],
         progress_percentage=state["progress_percentage"],
+        blocks_per_minute=blocks_per_minute,
+        estimated_time_remaining=estimated_time_remaining,
+        api_calls_made=state.get("api_calls_made", 0),
+        errors_encountered=state.get("errors_encountered", 0),
         logs=state["logs"][-50:]  # Return last 50 logs
     )
 
