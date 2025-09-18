@@ -342,7 +342,10 @@ function App() {
                       id="endBlock"
                       type="number"
                       value={scanConfig.endBlock}
-                      onChange={(e) => setScanConfig(prev => ({...prev, endBlock: e.target.value}))}
+                      onChange={(e) => {
+                        console.log('End block changed to:', e.target.value);
+                        setScanConfig(prev => ({...prev, endBlock: e.target.value}));
+                      }}
                       className="bg-slate-700 border-slate-600 text-white"
                       disabled={isScanning}
                     />
