@@ -37,6 +37,19 @@ command_exists() {
 print_header "🚀 Bitcoin Reused-R Scanner - Local Setup"
 print_header "=========================================="
 
+# Check if we're in the right directory
+print_status "Checking project structure..."
+if [ ! -d "backend" ] || [ ! -d "frontend" ]; then
+    print_error "Backend or frontend directory not found!"
+    print_error "Make sure you're in the project root directory with both 'backend' and 'frontend' folders."
+    print_error "Current directory: $(pwd)"
+    print_error "Contents: $(ls -la)"
+    exit 1
+fi
+
+print_status "✅ Project structure found"
+print_status "Current directory: $(pwd)"
+
 # Check prerequisites
 print_status "Checking prerequisites..."
 
