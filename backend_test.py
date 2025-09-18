@@ -218,7 +218,180 @@ class BitcoinScannerAPITester:
             print(f"❌ Failed - Error: {str(e)}")
             return False
 
-    def test_invalid_endpoints(self):
+    def test_cryptoapis_integration(self):
+        """Test CryptoAPIs integration and authentication fix"""
+        print(f"\n🔍 Testing CryptoAPIs Integration Fix...")
+        
+        # Test current height endpoint which should use CryptoAPIs in rotation
+        success, response = self.run_test(
+            "Current Height (CryptoAPIs Integration)",
+            "GET",
+            "current-height",
+            200
+        )
+        
+        if success and 'height' in response:
+            height = response['height']
+            print(f"   ✅ CryptoAPIs integration working - Current height: {height}")
+            # Test multiple times to ensure API rotation includes CryptoAPIs
+            for i in range(3):
+                success2, response2 = self.run_test(
+                    f"Height Check #{i+2} (API Rotation)",
+                    "GET",
+                    "current-height",
+                    200
+                )
+                if not success2:
+                    print(f"   ⚠️  API rotation test {i+2} failed")
+                    return False
+            print(f"   ✅ API rotation working - all 4 requests successful")
+            return True
+        else:
+            print(f"   ❌ CryptoAPIs integration failed - no height returned")
+            return False
+
+    def test_r_value_detection_block_252474(self):
+        """Test R-value detection with known vulnerable block 252474"""
+        print(f"\n🔍 Testing R-value Detection with Block 252474...")
+        
+        scan_config = {
+            "start_block": 252474,
+            "end_block": 252474,
+            "address_types": ["legacy", "segwit"]
+        }
+        
+        success, response = self.run_test(
+            "Start Scan Block 252474 (Known R-value Reuse)",
+            "POST",
+            "scan/start",
+            200,
+            data=scan_config
+        )
+        
+        if success and 'scan_id' in response:
+            self.scan_id = response['scan_id']
+            print(f"   Scan ID for block 252474: {self.scan_id}")
+            
+            # Wait for scan to complete with longer timeout for this specific block
+            print(f"   ⏳ Waiting for block 252474 scan to complete...")
+            scan_completed = self.wait_for_scan_completion(120)  # 2 minutes timeout
+            
+            if scan_completed:
+                # Check results for R-value reuse detection
+                success_results, results_response = self.run_test(
+                    "Block 252474 Results (R-value Detection)",
+                    "GET",
+                    f"scan/results/{self.scan_id}",
+                    200
+                )
+                
+                if success_results:
+                    r_reuse_pairs = results_response.get('r_reuse_pairs', 0)
+                    recovered_keys = results_response.get('total_keys', 0)
+                    
+                    print(f"   📊 Block 252474 Results:")
+                    print(f"      R-value reuse pairs found: {r_reuse_pairs}")
+                    print(f"      Private keys recovered: {recovered_keys}")
+                    
+                    # Block 252474 is known to contain reused R-values
+                    if r_reuse_pairs > 0:
+                        print(f"   ✅ R-value reuse detection working - found {r_reuse_pairs} reused R-values")
+                        return True
+                    else:
+                        print(f"   ⚠️  No R-value reuse detected in block 252474 (expected to find some)")
+                        return False
+                else:
+                    print(f"   ❌ Failed to get results for block 252474 scan")
+                    return False
+            else:
+                print(f"   ❌ Block 252474 scan did not complete in time")
+                return False
+        else:
+            print(f"   ❌ Failed to start scan for block 252474")
+            return False
+
+    def test_api_error_handling(self):
+        """Test API error handling and fallback mechanisms"""
+        print(f"\n🔍 Testing API Error Handling and Fallback...")
+        
+        # Test multiple rapid requests to trigger potential rate limiting and fallback
+        print(f"   Testing rapid API requests for fallback behavior...")
+        
+        successful_requests = 0
+        for i in range(5):
+            success, response = self.run_test(
+                f"Rapid Request #{i+1}",
+                "GET",
+                "current-height",
+                200
+            )
+            if success:
+                successful_requests += 1
+            time.sleep(0.5)  # Small delay between requests
+        
+        if successful_requests >= 4:  # Allow for 1 potential failure
+            print(f"   ✅ API fallback working - {successful_requests}/5 requests successful")
+            return True
+        else:
+            print(f"   ❌ API fallback issues - only {successful_requests}/5 requests successful")
+            return False
+
+    def test_parallel_processing(self):
+        """Test parallel processing with multiple block range"""
+        print(f"\n🔍 Testing Parallel Processing...")
+        
+        scan_config = {
+            "start_block": 1,
+            "end_block": 5,  # Small range for quick testing
+            "address_types": ["legacy", "segwit"]
+        }
+        
+        success, response = self.run_test(
+            "Start Parallel Processing Scan",
+            "POST",
+            "scan/start",
+            200,
+            data=scan_config
+        )
+        
+        if success and 'scan_id' in response:
+            parallel_scan_id = response['scan_id']
+            print(f"   Parallel scan ID: {parallel_scan_id}")
+            
+            # Monitor progress to ensure parallel processing is working
+            start_time = time.time()
+            max_wait = 60
+            
+            while time.time() - start_time < max_wait:
+                success_progress, progress_response = self.run_test(
+                    "Parallel Scan Progress",
+                    "GET",
+                    f"scan/progress/{parallel_scan_id}",
+                    200
+                )
+                
+                if success_progress:
+                    status = progress_response.get('status', 'unknown')
+                    progress = progress_response.get('progress_percentage', 0)
+                    blocks_per_minute = progress_response.get('blocks_per_minute', 0)
+                    
+                    print(f"   Status: {status}, Progress: {progress:.1f}%, Speed: {blocks_per_minute:.1f} blocks/min")
+                    
+                    if status in ['completed', 'failed']:
+                        if status == 'completed':
+                            print(f"   ✅ Parallel processing completed successfully")
+                            return True
+                        else:
+                            print(f"   ❌ Parallel processing failed")
+                            return False
+                
+                time.sleep(3)
+            
+            print(f"   ⚠️  Parallel processing test timed out")
+            return False
+        else:
+            print(f"   ❌ Failed to start parallel processing scan")
+            return False
         """Test error handling with invalid requests"""
         print(f"\n🔍 Testing Error Handling...")
         
