@@ -229,40 +229,24 @@ class BlockchainAPI:
         api_type, api_base = self.get_next_api()
         
         try:
-            if api_type == "cryptoapis" and self.cryptoapis_key:
-                url = f"{api_base}/addresses/{address}"
-                headers = {"X-API-Key": self.cryptoapis_key}
-                result = await self.make_request(url, headers)
-                if result and isinstance(result, dict):
-                    data = result.get('data', {}).get('item', {})
-                    confirmed_balance = float(data.get('confirmedBalance', {}).get('amount', 0))
-                    total_balance = float(data.get('totalSpent', {}).get('amount', 0))
-                    
-                    return BalanceCheck(
-                        address=address,
-                        balance=total_balance,
-                        confirmed_balance=confirmed_balance,
-                        unconfirmed_balance=0.0
-                    )
-            else:
-                url = f"{api_base}/address/{address}"
-                result = await self.make_request(url)
-                if result and isinstance(result, dict):
-                    funded = result.get('chain_stats', {}).get('funded_txo_sum', 0) / 100000000
-                    spent = result.get('chain_stats', {}).get('spent_txo_sum', 0) / 100000000
-                    unconfirmed_funded = result.get('mempool_stats', {}).get('funded_txo_sum', 0) / 100000000
-                    unconfirmed_spent = result.get('mempool_stats', {}).get('spent_txo_sum', 0) / 100000000
-                    
-                    confirmed_balance = funded - spent
-                    unconfirmed_balance = unconfirmed_funded - unconfirmed_spent
-                    total_balance = confirmed_balance + unconfirmed_balance
-                    
-                    return BalanceCheck(
-                        address=address,
-                        balance=total_balance,
-                        confirmed_balance=confirmed_balance,
-                        unconfirmed_balance=unconfirmed_balance
-                    )
+            url = f"{api_base}/address/{address}"
+            result = await self.make_request(url)
+            if result and isinstance(result, dict):
+                funded = result.get('chain_stats', {}).get('funded_txo_sum', 0) / 100000000
+                spent = result.get('chain_stats', {}).get('spent_txo_sum', 0) / 100000000
+                unconfirmed_funded = result.get('mempool_stats', {}).get('funded_txo_sum', 0) / 100000000
+                unconfirmed_spent = result.get('mempool_stats', {}).get('spent_txo_sum', 0) / 100000000
+                
+                confirmed_balance = funded - spent
+                unconfirmed_balance = unconfirmed_funded - unconfirmed_spent
+                total_balance = confirmed_balance + unconfirmed_balance
+                
+                return BalanceCheck(
+                    address=address,
+                    balance=total_balance,
+                    confirmed_balance=confirmed_balance,
+                    unconfirmed_balance=unconfirmed_balance
+                )
         except Exception as e:
             logger.error(f"Error getting balance for {address}: {e}")
             
