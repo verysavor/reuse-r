@@ -189,7 +189,7 @@ test_plan:
     - "CryptoAPIs Authentication Fix"
     - "Backend API Endpoints Testing"
   stuck_tasks:
-    - "CryptoAPIs Authentication Fix"
+    []
   test_all: false
   test_priority: "stuck_first"
 
