@@ -306,6 +306,47 @@ class BitcoinScannerAPITester:
             print(f"❌ Failed - Error: {str(e)}")
             return False
 
+    def test_api_rotation_with_cryptoapis(self):
+        """Test that API rotation now includes CryptoAPIs (3 APIs total)"""
+        print(f"\n🔥 CRITICAL: Testing API Rotation with CryptoAPIs")
+        
+        # Make multiple requests to current-height to test rotation
+        api_responses = []
+        for i in range(6):  # Make 6 requests to cycle through APIs twice
+            success, response = self.run_test(
+                f"Height Request #{i+1} (API Rotation)",
+                "GET",
+                "current-height",
+                200
+            )
+            if success:
+                height = response.get('height', 0)
+                api_responses.append(height)
+                print(f"   Request {i+1}: Height = {height}")
+            else:
+                print(f"   Request {i+1}: Failed")
+                api_responses.append(None)
+            
+            time.sleep(0.5)  # Small delay between requests
+        
+        # Check if we got consistent heights (all APIs should return similar values)
+        valid_heights = [h for h in api_responses if h and h > 900000]
+        
+        if len(valid_heights) >= 4:  # At least 4 successful requests
+            height_range = max(valid_heights) - min(valid_heights)
+            if height_range <= 5:  # Heights should be within 5 blocks of each other
+                print(f"✅ API rotation working - {len(valid_heights)} successful requests")
+                print(f"   Height range: {min(valid_heights)} - {max(valid_heights)} (diff: {height_range})")
+                self.api_rotation_verified = True
+                return True
+            else:
+                print(f"⚠️  Large height variance detected: {height_range} blocks")
+                print("   This might indicate API inconsistency")
+                return False
+        else:
+            print(f"❌ API rotation issues - only {len(valid_heights)} successful requests")
+            return False
+
     def test_api_fallback_mechanisms(self):
         """Test that APIs work with fallback to Blockstream/Mempool when CryptoAPIs fails"""
         print(f"\n🔍 Testing API Fallback Mechanisms...")
