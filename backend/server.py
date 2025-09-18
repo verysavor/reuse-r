@@ -498,8 +498,8 @@ class RValueScanner:
                 tx_semaphore = asyncio.Semaphore(3)  # Reduced from 5 to be more conservative
                 tx_tasks = []
                 
-                # Only process first 10 transactions per block to avoid API overload
-                for tx_id in tx_ids[:10]:
+                # Process all transactions in the block for this test
+                for tx_id in tx_ids:
                     if scan_states[scan_id]["status"] == "stopped":
                         break
                     task = self.process_single_transaction(tx_semaphore, tx_id, address_types, scan_id)
