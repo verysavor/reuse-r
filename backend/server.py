@@ -100,7 +100,7 @@ class BlockchainAPI:
         self.cryptoapis_base = "https://rest.cryptoapis.io/v2/blockchain-data/bitcoin/mainnet"
         self.cryptoapis_key = os.environ.get('CRYPTOAPIS_API_KEY')
         self.current_api = 0
-        self.rate_limit_semaphore = asyncio.Semaphore(50)  # Higher for CryptoAPIs
+        self.rate_limit_semaphore = asyncio.Semaphore(15)  # Reduced to avoid overwhelming APIs
         
     def get_next_api(self):
         """Rotate between APIs with CryptoAPIs for high throughput"""
