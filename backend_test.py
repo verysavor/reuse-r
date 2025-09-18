@@ -367,8 +367,11 @@ def main():
     
     # Test sequence
     tests = [
+        ("Health Check", tester.test_health_check),
         ("Current Height", tester.test_current_height),
-        ("Start Scan", tester.test_start_scan),
+        ("CryptoAPIs Integration", tester.test_cryptoapis_integration),
+        ("API Fallback Mechanisms", tester.test_api_fallback_mechanisms),
+        ("Start Single Block Scan", tester.test_start_scan_single_block),
         ("Scan Progress", tester.test_scan_progress),
         ("List Scans", tester.test_scan_list),
         ("Balance Check", tester.test_balance_check),
