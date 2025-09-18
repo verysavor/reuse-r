@@ -101,7 +101,9 @@ function App() {
       
       const response = await axios.post(`${API}/scan/start`, scanData);
       
-      setCurrentScan(response.data.scan_id);
+      const scanId = response.data.scan_id;
+      console.log('Setting currentScan to:', scanId);
+      setCurrentScan(scanId);
       setIsScanning(true);
       setScanResults(null);
       setScanLogs([]);
