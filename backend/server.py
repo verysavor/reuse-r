@@ -624,8 +624,8 @@ class RValueScanner:
                 
                 await self.add_log(scan_id, f"Found {len(tx_ids)} transactions in block {block_num}")
                 
-                # Process transactions in parallel with high concurrency 
-                tx_semaphore = asyncio.Semaphore(self.max_concurrent_transactions)  # Much higher transaction concurrency
+                # Process transactions in parallel with maximum concurrency for speed
+                tx_semaphore = asyncio.Semaphore(self.max_concurrent_transactions)
                 tx_tasks = []
                 
                 # Process all transactions in the block for this test
