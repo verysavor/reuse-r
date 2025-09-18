@@ -925,60 +925,47 @@ async def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
 
-@api_router.get("/test-cryptoapis")
-async def test_cryptoapis():
-    """Test CryptoAPIs authentication and endpoints"""
+@api_router.get("/test-block-252474")
+async def test_block_252474():
+    """Test blockchain API specifically for block 252474"""
     api = BlockchainAPI()
     
     test_results = {
-        "has_api_key": bool(api.cryptoapis_key),
-        "api_key_preview": f"{api.cryptoapis_key[:8]}..." if api.cryptoapis_key else None,
         "tests": {}
     }
     
-    if not api.cryptoapis_key:
-        return test_results
-    
-    # Test 1: Get latest block info with detailed error handling
+    # Test getting block hash for 252474
     try:
-        url = f"{api.cryptoapis_base}/blocks/utxo/bitcoin/mainnet/height/915000/details"
-        headers = {
-            "x-api-key": api.cryptoapis_key,
-            "Content-Type": "application/json"
+        block_hash = await api.get_block_hash(252474)
+        test_results["tests"]["get_block_hash"] = {
+            "success": bool(block_hash),
+            "block_hash": block_hash
         }
         
-        # Make direct request with detailed error handling
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url, headers=headers) as resp:
-                response_text = await resp.text()
-                test_results["tests"]["latest_block"] = {
-                    "success": resp.status == 200,
-                    "status_code": resp.status,
-                    "response_text": response_text,
-                    "url": url,
-                    "headers_sent": headers
+        # If we got the hash, test getting transactions
+        if block_hash:
+            tx_ids = await api.get_block_transactions(block_hash)
+            test_results["tests"]["get_block_transactions"] = {
+                "success": bool(tx_ids),
+                "transaction_count": len(tx_ids) if tx_ids else 0,
+                "first_few_txs": tx_ids[:5] if tx_ids else []
+            }
+            
+            # Test getting a specific transaction if we have any
+            if tx_ids:
+                first_tx = tx_ids[0]
+                tx_data = await api.get_transaction(first_tx)
+                test_results["tests"]["get_transaction"] = {
+                    "success": bool(tx_data),
+                    "tx_id": first_tx,
+                    "has_vin": "vin" in tx_data,
+                    "vin_count": len(tx_data.get("vin", [])),
+                    "has_vout": "vout" in tx_data,
+                    "vout_count": len(tx_data.get("vout", []))
                 }
-                if resp.status == 200:
-                    try:
-                        test_results["tests"]["latest_block"]["data"] = json.loads(response_text)
-                    except:
-                        test_results["tests"]["latest_block"]["data"] = response_text
-                        
+        
     except Exception as e:
-        test_results["tests"]["latest_block"] = {
-            "success": False,
-            "error": str(e)
-        }
-    
-    # Test 2: Get latest block height through CryptoAPIs method
-    try:
-        height = await api.get_block_height()
-        test_results["tests"]["block_height"] = {
-            "success": height > 0,
-            "height": height
-        }
-    except Exception as e:
-        test_results["tests"]["block_height"] = {
+        test_results["tests"]["error"] = {
             "success": False,
             "error": str(e)
         }
