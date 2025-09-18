@@ -104,8 +104,9 @@ class BlockchainAPI:
         self.rate_limit_semaphore = asyncio.Semaphore(15)  # Reduced to avoid overwhelming APIs
         
     def get_next_api(self):
-        """Use only Blockstream API for now due to CryptoAPIs credit exhaustion"""
+        """Use Blockchain.info API to avoid rate limits"""
         apis = [
+            ("blockchain_info", self.blockchain_info_base),
             ("blockstream", self.blockstream_base),
         ]
         
