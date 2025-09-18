@@ -222,11 +222,17 @@ class BlockchainAPI:
         return ""
     
     async def get_block_transactions(self, block_hash: str) -> List[str]:
-        """Get transaction IDs in a block"""
+        """Get transaction IDs from a block"""
         api_type, api_base = self.get_next_api()
         
         try:
-            if api_type == "cryptoapis" and self.cryptoapis_key:
+            if api_type == "blockchain_info":
+                url = f"{api_base}/rawblock/{block_hash}"
+                result = await self.make_request(url)
+                if result and isinstance(result, dict) and 'tx' in result:
+                    transactions = result['tx']
+                    return [tx.get('hash', '') for tx in transactions if tx.get('hash')]
+            elif api_type == "cryptoapis" and self.cryptoapis_key:
                 url = f"{api_base}/blocks/utxo/bitcoin/mainnet/{block_hash}/transactions"
                 headers = {
                     "x-api-key": self.cryptoapis_key,
@@ -236,13 +242,19 @@ class BlockchainAPI:
                 if result and isinstance(result, dict):
                     transactions = result.get('data', {}).get('items', [])
                     return [tx.get('id', tx.get('hash', '')) for tx in transactions if tx.get('id') or tx.get('hash')]
-            else:
+            elif api_type == "blockstream":
+                url = f"{api_base}/block/{block_hash}/txids"
+                result = await self.make_request(url)
+                if result and isinstance(result, list):
+                    return result
+            elif api_type == "mempool":
                 url = f"{api_base}/block/{block_hash}/txids"
                 result = await self.make_request(url)
                 if result and isinstance(result, list):
                     return result
         except Exception as e:
-            logger.error(f"Error getting block transactions from {api_type}: {e}")
+            logger.error(f"Error getting block transactions: {e}")
+        
         return []
     
     async def get_transaction(self, tx_id: str) -> Dict:
