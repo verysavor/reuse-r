@@ -95,19 +95,17 @@ logger = logging.getLogger(__name__)
 # Blockchain API helpers
 class BlockchainAPI:
     def __init__(self):
-        self.api_endpoints = [
-            "https://blockstream.info/api",
-            "https://mempool.space/api"
-            # Removed BlockCypher due to different API structure causing 404s
-        ]
-        self.current_endpoint = 0
+        self.blockstream_base = "https://blockstream.info/api"
+        self.mempool_base = "https://mempool.space/api"
+        self.current_api = 0
         self.rate_limit_semaphore = asyncio.Semaphore(20)  # Allow 20 concurrent requests
         
-    def get_next_endpoint(self):
-        """Round-robin through API endpoints"""
-        endpoint = self.api_endpoints[self.current_endpoint % len(self.api_endpoints)]
-        self.current_endpoint += 1
-        return endpoint
+    def get_next_api(self):
+        """Alternate between the two working APIs"""
+        apis = [self.blockstream_base, self.mempool_base]
+        api = apis[self.current_api % len(apis)]
+        self.current_api += 1
+        return api
         
     async def make_request(self, url: str, retries: int = 3) -> dict:
         """Make HTTP request with rate limiting and retries - creates new session per request"""
@@ -141,111 +139,82 @@ class BlockchainAPI:
             return None
     
     async def get_block_height(self) -> int:
-        """Get current block height with fallback endpoints"""
-        for endpoint in self.api_endpoints:  # Try both working endpoints
+        """Get current block height"""
+        try:
+            url = f"{self.blockstream_base}/blocks/tip/height"
+            result = await self.make_request(url)
+            if result:
+                return int(result) if isinstance(result, str) else result
+        except Exception as e:
+            logger.error(f"Error getting block height: {e}")
+            # Fallback to mempool.space
             try:
-                url = f"{endpoint}/blocks/tip/height"
+                url = f"{self.mempool_base}/blocks/tip/height"
                 result = await self.make_request(url)
                 if result:
                     return int(result) if isinstance(result, str) else result
-            except Exception as e:
-                logger.error(f"Error getting block height from {endpoint}: {e}")
-                continue
+            except:
+                pass
         return 0
     
     async def get_block_hash(self, height: int) -> str:
-        """Get block hash by height with load balancing"""
-        endpoint = self.get_next_endpoint()
-        
+        """Get block hash by height"""
+        api_base = self.get_next_api()
         try:
-            if "blockcypher" in endpoint:
-                # BlockCypher has different API structure
-                url = f"{endpoint}/blocks/{height}"
-                result = await self.make_request(url)
-                if result and isinstance(result, dict):
-                    return result.get('hash', '')
-            else:
-                url = f"{endpoint}/block-height/{height}"
-                result = await self.make_request(url)
-                if result:
-                    return str(result)
+            url = f"{api_base}/block-height/{height}"
+            result = await self.make_request(url)
+            if result:
+                return str(result)
         except Exception as e:
             logger.error(f"Error getting block hash for height {height}: {e}")
-            
         return ""
     
     async def get_block_transactions(self, block_hash: str) -> List[str]:
-        """Get transaction IDs in a block with load balancing"""
-        endpoint = self.get_next_endpoint()
-        
+        """Get transaction IDs in a block"""
+        api_base = self.get_next_api()
         try:
-            if "blockcypher" in endpoint:
-                # Different endpoint structure
-                url = f"{endpoint}/blocks/{block_hash}?txstart=0&limit=500"
-                result = await self.make_request(url)
-                if result and isinstance(result, dict):
-                    return [tx['hash'] for tx in result.get('txs', [])]
-            else:
-                url = f"{endpoint}/block/{block_hash}/txids"
-                result = await self.make_request(url)
-                if result and isinstance(result, list):
-                    return result
+            url = f"{api_base}/block/{block_hash}/txids"
+            result = await self.make_request(url)
+            if result and isinstance(result, list):
+                return result
         except Exception as e:
             logger.error(f"Error getting block transactions: {e}")
-            
         return []
     
     async def get_transaction(self, tx_id: str) -> Dict:
-        """Get transaction details with load balancing"""
-        endpoint = self.get_next_endpoint()
-        
+        """Get transaction details"""
+        api_base = self.get_next_api()
         try:
-            url = f"{endpoint}/tx/{tx_id}"
+            url = f"{api_base}/tx/{tx_id}"
             result = await self.make_request(url)
             if result and isinstance(result, dict):
                 return result
         except Exception as e:
             logger.error(f"Error getting transaction {tx_id}: {e}")
-            
         return {}
     
     async def get_address_balance(self, address: str) -> BalanceCheck:
-        """Get address balance with load balancing"""
-        endpoint = self.get_next_endpoint()
-        
+        """Get address balance"""
+        api_base = self.get_next_api()
         try:
-            if "blockcypher" in endpoint:
-                url = f"{endpoint}/addrs/{address}/balance"
-                result = await self.make_request(url)
-                if result and isinstance(result, dict):
-                    balance = result.get('final_balance', 0) / 100000000
-                    unconfirmed = result.get('unconfirmed_balance', 0) / 100000000
-                    
-                    return BalanceCheck(
-                        address=address,
-                        balance=balance + unconfirmed,
-                        confirmed_balance=balance,
-                        unconfirmed_balance=unconfirmed
-                    )
-            else:
-                url = f"{endpoint}/address/{address}"
-                result = await self.make_request(url)
-                if result and isinstance(result, dict):
-                    funded = result.get('chain_stats', {}).get('funded_txo_sum', 0) / 100000000
-                    spent = result.get('chain_stats', {}).get('spent_txo_sum', 0) / 100000000
-                    unconfirmed_funded = result.get('mempool_stats', {}).get('funded_txo_sum', 0) / 100000000
-                    unconfirmed_spent = result.get('mempool_stats', {}).get('spent_txo_sum', 0) / 100000000
-                    
-                    confirmed_balance = funded - spent
-                    unconfirmed_balance = unconfirmed_funded - unconfirmed_spent
-                    total_balance = confirmed_balance + unconfirmed_balance
-                    
-                    return BalanceCheck(
-                        address=address,
-                        balance=total_balance,
-                        confirmed_balance=confirmed_balance,
-                        unconfirmed_balance=unconfirmed_balance
-                    )
+            url = f"{api_base}/address/{address}"
+            result = await self.make_request(url)
+            if result and isinstance(result, dict):
+                funded = result.get('chain_stats', {}).get('funded_txo_sum', 0) / 100000000
+                spent = result.get('chain_stats', {}).get('spent_txo_sum', 0) / 100000000
+                unconfirmed_funded = result.get('mempool_stats', {}).get('funded_txo_sum', 0) / 100000000
+                unconfirmed_spent = result.get('mempool_stats', {}).get('spent_txo_sum', 0) / 100000000
+                
+                confirmed_balance = funded - spent
+                unconfirmed_balance = unconfirmed_funded - unconfirmed_spent
+                total_balance = confirmed_balance + unconfirmed_balance
+                
+                return BalanceCheck(
+                    address=address,
+                    balance=total_balance,
+                    confirmed_balance=confirmed_balance,
+                    unconfirmed_balance=unconfirmed_balance
+                )
         except Exception as e:
             logger.error(f"Error getting balance for {address}: {e}")
             
