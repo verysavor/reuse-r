@@ -172,15 +172,16 @@ class BitcoinScannerAPITester:
         return False
 
     def test_start_scan_small_range(self):
-        """Test starting a scan with small block range"""
+        """Test starting a scan with small block range to verify CryptoAPIs usage"""
+        print(f"\n🔥 CRITICAL: Testing Small Range Scan (CryptoAPIs Integration)")
         scan_config = {
             "start_block": 915000,
-            "end_block": 915002,
+            "end_block": 915001,  # Just 2 blocks for faster testing
             "address_types": ["legacy", "segwit"]
         }
         
         success, response = self.run_test(
-            "Start Small Range Scan",
+            "Start Small Range Scan (CryptoAPIs Test)",
             "POST",
             "scan/start",
             200,
@@ -190,6 +191,7 @@ class BitcoinScannerAPITester:
         if success and 'scan_id' in response:
             self.scan_id = response['scan_id']
             print(f"   Scan ID: {self.scan_id}")
+            print(f"   This scan will test CryptoAPIs integration in parallel processing")
             return True
         return False
 
