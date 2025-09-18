@@ -194,7 +194,7 @@ class BlockchainAPI:
         
         try:
             if api_type == "cryptoapis" and self.cryptoapis_key:
-                url = f"{api_base}/blockchain-data/bitcoin/mainnet/blocks/{height}"
+                url = f"{api_base}/blockchain-data/bitcoin/mainnet/blocks/height/{height}/details"
                 headers = {
                     "x-api-key": self.cryptoapis_key,
                     "Content-Type": "application/json"
