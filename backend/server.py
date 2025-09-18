@@ -100,13 +100,13 @@ class BlockchainAPI:
         self.cryptoapis_base = "https://rest.cryptoapis.io"
         self.cryptoapis_key = os.environ.get('CRYPTOAPIS_API_KEY')
         self.current_api = 0
-        # Balanced concurrency limits for reliability with good speed
-        self.rate_limit_semaphore = asyncio.Semaphore(50)  # Reduced from 100
+        # High-performance concurrency limits for maximum speed
+        self.rate_limit_semaphore = asyncio.Semaphore(100)  # High throughput
         
-        # More conservative API semaphores to avoid rate limits
-        self.blockstream_semaphore = asyncio.Semaphore(15)  # Reduced from 30
-        self.mempool_semaphore = asyncio.Semaphore(15)      # Reduced from 30
-        self.cryptoapis_semaphore = asyncio.Semaphore(25)   # Reduced from 40, still higher for paid API
+        # Aggressive API semaphores for maximum speed (balanced to avoid rate limits)
+        self.blockstream_semaphore = asyncio.Semaphore(25)  # Increased
+        self.mempool_semaphore = asyncio.Semaphore(25)      # Increased 
+        self.cryptoapis_semaphore = asyncio.Semaphore(50)   # Higher for paid API
         
     def get_available_apis(self):
         """Get all available APIs for parallel processing"""
