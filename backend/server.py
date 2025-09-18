@@ -403,6 +403,10 @@ class RValueScanner:
                             signatures_by_r[r_value].append(sig)
                         
                         scan_states[scan_id]["signatures_found"] += len(block_signatures)
+                    elif isinstance(result, Exception):
+                        # Count exceptions as errors
+                        scan_states[scan_id]["errors_encountered"] = scan_states[scan_id].get("errors_encountered", 0) + 1
+                        await self.add_log(scan_id, f"Batch processing error: {str(result)}", "error")
                 
                 # Update progress
                 blocks_processed = min(batch_end - start_block + 1, total_blocks)
