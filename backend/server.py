@@ -523,8 +523,8 @@ class RValueScanner:
                 
                 await self.add_log(scan_id, f"Batch complete: {len([r for r in signatures_by_r.values() if len(r) > 1])} reused R values found so far")
                 
-                # Small delay between batches to prevent overwhelming APIs
-                await asyncio.sleep(0.5)
+                # Progress update without delay
+                progress = (batch_end - start_block + 1) / total_blocks * 100
             
             # Find reused R values and recover private keys
             await self.find_reused_r_values(scan_id, signatures_by_r)
