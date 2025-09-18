@@ -97,7 +97,7 @@ class BlockchainAPI:
     def __init__(self):
         self.blockstream_base = "https://blockstream.info/api"
         self.mempool_base = "https://mempool.space/api"
-        self.cryptoapis_base = "https://rest.cryptoapis.io/v2"
+        self.cryptoapis_base = "https://rest.cryptoapis.io/v2/blockchain-data/bitcoin/mainnet"
         self.cryptoapis_key = os.environ.get('CRYPTOAPIS_API_KEY')
         self.current_api = 0
         self.rate_limit_semaphore = asyncio.Semaphore(15)  # Reduced to avoid overwhelming APIs
