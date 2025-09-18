@@ -172,10 +172,9 @@ class BlockchainAPI:
                     
             return None
 
-    async def make_parallel_api_request(self, endpoint_func, *args, max_concurrent_per_api: int = 5):
+    async def make_parallel_api_request(self, endpoint_func, *args):
         """Make requests to all available APIs in parallel and return first successful result"""
         apis = self.get_available_apis()
-        results = []
         
         async def try_api(api_type, api_base, semaphore):
             async with semaphore:
@@ -186,33 +185,48 @@ class BlockchainAPI:
                     logger.debug(f"API {api_type} failed for {endpoint_func.__name__}: {e}")
                     return (api_type, None)
         
-        # Create tasks for all APIs with timeout
-        tasks = [try_api(api_type, api_base, semaphore) for api_type, api_base, semaphore in apis]
+        # Create tasks for all APIs
+        tasks = [asyncio.create_task(try_api(api_type, api_base, semaphore)) 
+                 for api_type, api_base, semaphore in apis]
         
         try:
-            # Wait for all APIs with a reasonable timeout
-            completed_results = await asyncio.wait_for(
-                asyncio.gather(*tasks, return_exceptions=False),
-                timeout=30.0
+            # Wait for first successful result or timeout
+            done, pending = await asyncio.wait(
+                tasks, 
+                timeout=30.0,
+                return_when=asyncio.FIRST_COMPLETED
             )
             
-            # Find first successful result
-            for api_type, result in completed_results:
-                if result is not None:
-                    return result
-                    
-            # If no results, return None
+            # Cancel pending tasks
+            for task in pending:
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+            
+            # Check completed tasks for successful result
+            for task in done:
+                try:
+                    api_type, result = await task
+                    if result is not None:
+                        return result
+                except Exception as e:
+                    logger.debug(f"Task error: {e}")
+                    continue
+            
             return None
             
-        except asyncio.TimeoutError:
-            logger.warning(f"All APIs timed out for {endpoint_func.__name__}")
-            # Cancel remaining tasks
+        except Exception as e:
+            logger.error(f"Error in parallel API request: {e}")
+            # Cancel all tasks on error
             for task in tasks:
                 if not task.done():
                     task.cancel()
-            return None
-        except Exception as e:
-            logger.error(f"Error in parallel API request: {e}")
+                    try:
+                        await task
+                    except asyncio.CancelledError:
+                        pass
             return None
     
     async def get_block_height(self) -> int:
