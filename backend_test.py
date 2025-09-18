@@ -264,6 +264,39 @@ class BitcoinScannerAPITester:
             print(f"❌ Failed - Error: {str(e)}")
             return False
 
+    def test_api_fallback_mechanisms(self):
+        """Test that APIs work with fallback to Blockstream/Mempool when CryptoAPIs fails"""
+        print(f"\n🔍 Testing API Fallback Mechanisms...")
+        
+        # Test current height (should work with fallback APIs)
+        success1, response1 = self.run_test(
+            "Height with Fallback",
+            "GET",
+            "current-height",
+            200
+        )
+        
+        height_works = success1 and response1.get('height', 0) > 0
+        
+        # Test balance check (uses fallback APIs)
+        test_address = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"  # Genesis address
+        success2, response2 = self.run_test(
+            "Balance with Fallback",
+            "POST",
+            "balance/check",
+            200,
+            data=[test_address]
+        )
+        
+        balance_works = success2 and 'balances' in response2
+        
+        if height_works and balance_works:
+            print("✅ API fallback mechanisms working correctly")
+            return True
+        else:
+            print("❌ API fallback mechanisms not working properly")
+            return False
+
     def test_invalid_endpoints(self):
         """Test error handling with invalid requests"""
         print(f"\n🔍 Testing Error Handling...")
