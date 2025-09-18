@@ -335,6 +335,46 @@ class BlockchainAPI:
             logger.error(f"Raw CryptoAPIs data: {tx_data}")
             return {}
     
+    def convert_blockchain_info_transaction(self, tx_data: Dict) -> Dict:
+        """Convert blockchain.info transaction format to standard format"""
+        try:
+            # Convert inputs from blockchain.info to standard format
+            vin = []
+            for inp in tx_data.get('inputs', []):
+                # blockchain.info uses 'script' field directly
+                script_hex = inp.get('script', '')
+                
+                # blockchain.info doesn't typically include witness data in raw format
+                # but we'll check for it anyway
+                witness_data = inp.get('witness', [])
+                if not isinstance(witness_data, list):
+                    witness_data = []
+                
+                vin_item = {
+                    'scriptsig': script_hex,
+                    'witness': witness_data
+                }
+                vin.append(vin_item)
+            
+            # Convert outputs from blockchain.info format
+            vout = []
+            for out in tx_data.get('out', []):
+                vout_item = {
+                    'scriptpubkey': out.get('script', ''),
+                    'value': out.get('value', 0)  # blockchain.info already provides value in satoshis
+                }
+                vout.append(vout_item)
+            
+            return {
+                'txid': tx_data.get('hash', ''),
+                'vin': vin,
+                'vout': vout
+            }
+        except Exception as e:
+            logger.error(f"Error converting blockchain.info transaction format: {e}")
+            logger.error(f"Raw blockchain.info data: {tx_data}")
+            return {}
+    
     async def get_address_balance(self, address: str) -> BalanceCheck:
         """Get address balance"""
         api_type, api_base = self.get_next_api()
