@@ -111,11 +111,14 @@ backend:
     file: "backend/server.py"
     stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         -working: false
         -agent: "main"
         -comment: "Fixed header format from 'x-api-key' to 'X-API-Key' and corrected base URL structure. However, all CryptoAPIs endpoints return 'uri_not_found' error. Troubleshoot agent identified URL structure issues. Currently using fallback APIs (Blockstream, Mempool.space) which work correctly."
+        -working: false
+        -agent: "testing"
+        -comment: "TESTED: CryptoAPIs integration confirmed failing with 'uri_not_found' error (status 400). API key is present and correctly formatted. The issue is with CryptoAPIs endpoint URLs - they appear to have changed their API structure. However, fallback mechanisms to Blockstream and Mempool.space APIs are working perfectly. All core functionality is operational without CryptoAPIs."
 
   - task: "Parallel API Processing"
     implemented: true
@@ -128,6 +131,9 @@ backend:
         -working: true
         -agent: "main"
         -comment: "Blockstream and Mempool.space APIs working correctly with parallel processing. Rate limiting and fallback mechanisms functioning properly."
+        -working: true
+        -agent: "testing"
+        -comment: "TESTED: Parallel API processing confirmed working. Tested with multiple concurrent scans, API fallback mechanisms, and rate limiting. All endpoints respond correctly with proper error handling and fallback to alternative APIs when needed."
 
   - task: "R-value Detection Logic"
     implemented: true
@@ -140,6 +146,21 @@ backend:
         -working: true
         -agent: "main"
         -comment: "Core R-value scanning logic operational, correctly identifying reused R values in transactions."
+        -working: true
+        -agent: "testing"
+        -comment: "TESTED: R-value detection logic confirmed working. Successfully tested single block scans and small range scans. Scan progress tracking, signature extraction, and result compilation all functioning correctly. Scans complete successfully and provide detailed logs and progress metrics."
+
+  - task: "Backend API Endpoints Testing"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        -working: true
+        -agent: "testing"
+        -comment: "TESTED: All backend API endpoints working correctly. Health check (/api/health) returns healthy status. Current height (/api/current-height) returns correct blockchain height (915191). Scan start, progress tracking, results, and export endpoints all functional. Error handling works for invalid requests. Balance checking operational."
 
 frontend:
   - task: "API Integration Display"
