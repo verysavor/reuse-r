@@ -502,18 +502,21 @@ class BitcoinScannerAPITester:
 
 def main():
     print("🚀 Starting Bitcoin Reused-R Scanner API Tests")
+    print("🔥 FOCUS: CryptoAPIs Integration Testing")
     print("=" * 60)
     
     tester = BitcoinScannerAPITester()
     
-    # Test sequence
+    # Test sequence - prioritizing CryptoAPIs tests
     tests = [
         ("Health Check", tester.test_health_check),
         ("Current Height", tester.test_current_height),
-        ("CryptoAPIs Integration", tester.test_cryptoapis_integration),
+        ("🔥 CryptoAPIs Integration", tester.test_cryptoapis_integration),
+        ("🔥 API Rotation with CryptoAPIs", tester.test_api_rotation_with_cryptoapis),
+        ("🔥 Rate Limiting Improvements", tester.test_rate_limiting_improvements),
         ("API Fallback Mechanisms", tester.test_api_fallback_mechanisms),
-        ("Start Single Block Scan", tester.test_start_scan_single_block),
-        ("Scan Progress", tester.test_scan_progress),
+        ("🔥 Small Range Scan (CryptoAPIs)", tester.test_start_scan_small_range),
+        ("🔥 Scan Progress (CryptoAPIs)", tester.test_scan_progress),
         ("List Scans", tester.test_scan_list),
         ("Balance Check", tester.test_balance_check),
         ("Error Handling", tester.test_invalid_endpoints),
@@ -528,7 +531,7 @@ def main():
     
     # Wait for scan to complete and test results
     if tester.scan_id:
-        scan_completed = tester.wait_for_scan_completion(60)
+        scan_completed = tester.wait_for_scan_completion(90)  # Increased timeout
         if scan_completed:
             tester.test_scan_results()
             tester.test_export_results()
@@ -537,9 +540,19 @@ def main():
             tester.test_scan_results()
             tester.test_export_results()
     
-    # Print final results
+    # Print final results with CryptoAPIs focus
     print("\n" + "=" * 60)
     print(f"📊 Final Results: {tester.tests_passed}/{tester.tests_run} tests passed")
+    
+    # CryptoAPIs specific summary
+    print("\n🔥 CRYPTOAPIS INTEGRATION SUMMARY:")
+    print(f"   CryptoAPIs Working: {'✅ YES' if tester.cryptoapis_working else '❌ NO'}")
+    print(f"   API Rotation Verified: {'✅ YES' if tester.api_rotation_verified else '❌ NO'}")
+    
+    if tester.cryptoapis_working and tester.api_rotation_verified:
+        print("🎉 CryptoAPIs integration SUCCESSFUL!")
+    else:
+        print("⚠️  CryptoAPIs integration has issues!")
     
     if tester.tests_passed == tester.tests_run:
         print("🎉 All tests passed!")
