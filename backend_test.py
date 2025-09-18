@@ -394,6 +394,50 @@ class BitcoinScannerAPITester:
             print("❌ API fallback mechanisms not working properly")
             return False
 
+    def test_rate_limiting_improvements(self):
+        """Test rate limiting improvements with CryptoAPIs integration"""
+        print(f"\n🔥 CRITICAL: Testing Rate Limiting Improvements")
+        
+        # Make rapid requests to test rate limiting
+        start_time = time.time()
+        successful_requests = 0
+        failed_requests = 0
+        
+        print("   Making 10 rapid requests to test throughput...")
+        for i in range(10):
+            try:
+                url = f"{self.api_url}/current-height"
+                response = requests.get(url, timeout=10)
+                if response.status_code == 200:
+                    successful_requests += 1
+                    height = response.json().get('height', 0)
+                    print(f"     Request {i+1}: Success (Height: {height})")
+                else:
+                    failed_requests += 1
+                    print(f"     Request {i+1}: Failed ({response.status_code})")
+            except Exception as e:
+                failed_requests += 1
+                print(f"     Request {i+1}: Error ({str(e)})")
+            
+            time.sleep(0.2)  # 200ms between requests
+        
+        end_time = time.time()
+        total_time = end_time - start_time
+        requests_per_second = 10 / total_time
+        
+        print(f"   Results: {successful_requests}/10 successful requests")
+        print(f"   Total time: {total_time:.2f}s")
+        print(f"   Rate: {requests_per_second:.2f} requests/second")
+        
+        # With CryptoAPIs, we should have better success rate
+        success_rate = successful_requests / 10
+        if success_rate >= 0.8:  # 80% success rate
+            print(f"✅ Rate limiting improvements verified - {success_rate*100:.0f}% success rate")
+            return True
+        else:
+            print(f"❌ Rate limiting issues - only {success_rate*100:.0f}% success rate")
+            return False
+
     def test_invalid_endpoints(self):
         """Test error handling with invalid requests"""
         print(f"\n🔍 Testing Error Handling...")
