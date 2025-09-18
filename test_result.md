@@ -245,10 +245,18 @@ metadata:
   run_ui: false
 
 test_plan:
-  current_focus: []
-  stuck_tasks: []
+  current_focus:
+    - "Progress Tracking System"
+    - "API Request Reliability and Timeout Handling"
+    - "Large Block Range Processing"
+    - "Async Coroutine Handling"
+  stuck_tasks:
+    - "Progress Tracking System"
+    - "API Request Reliability and Timeout Handling"
+    - "Large Block Range Processing"
+    - "Async Coroutine Handling"
   test_all: false
-  test_priority: "high_first"
+  test_priority: "stuck_first"
 
 agent_communication:
     - agent: "main"
