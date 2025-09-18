@@ -163,10 +163,15 @@ function App() {
   };
 
   const fetchScanResults = async () => {
-    if (!currentScan) return;
+    if (!currentScan) {
+      console.log('No currentScan ID available for fetchScanResults');
+      return;
+    }
     
     try {
+      console.log('Fetching scan results for:', currentScan);
       const response = await axios.get(`${API}/scan/results/${currentScan}`);
+      console.log('Scan results received:', response.data);
       setScanResults(response.data);
     } catch (error) {
       console.error('Error fetching scan results:', error);
