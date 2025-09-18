@@ -141,6 +141,12 @@ class BlockchainAPI:
                                 continue
                             else:
                                 logger.warning(f"API error {resp.status} for {url}")
+                                # For debugging, also log response text
+                                try:
+                                    error_text = await resp.text()
+                                    logger.warning(f"Response text: {error_text}")
+                                except:
+                                    pass
                                 
                 except Exception as e:
                     logger.warning(f"Request failed (attempt {attempt + 1}) for {url}: {e}")
