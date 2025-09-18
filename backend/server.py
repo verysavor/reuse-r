@@ -830,6 +830,53 @@ async def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
 
+@api_router.get("/test-cryptoapis")
+async def test_cryptoapis():
+    """Test CryptoAPIs authentication and endpoints"""
+    api = BlockchainAPI()
+    
+    test_results = {
+        "has_api_key": bool(api.cryptoapis_key),
+        "api_key_preview": f"{api.cryptoapis_key[:8]}..." if api.cryptoapis_key else None,
+        "tests": {}
+    }
+    
+    if not api.cryptoapis_key:
+        return test_results
+    
+    # Test 1: Get blockchain info
+    try:
+        url = f"{api.cryptoapis_base}/info"
+        headers = {
+            "x-api-key": api.cryptoapis_key,
+            "Content-Type": "application/json"
+        }
+        result = await api.make_request(url, headers)
+        test_results["tests"]["blockchain_info"] = {
+            "success": result is not None,
+            "data": result
+        }
+    except Exception as e:
+        test_results["tests"]["blockchain_info"] = {
+            "success": False,
+            "error": str(e)
+        }
+    
+    # Test 2: Get latest block height through CryptoAPIs method
+    try:
+        height = await api.get_block_height()
+        test_results["tests"]["block_height"] = {
+            "success": height > 0,
+            "height": height
+        }
+    except Exception as e:
+        test_results["tests"]["block_height"] = {
+            "success": False,
+            "error": str(e)
+        }
+    
+    return test_results
+
 @api_router.get("/current-height")
 async def get_current_height():
     """Get current blockchain height"""
