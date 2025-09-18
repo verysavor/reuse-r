@@ -515,7 +515,7 @@ function App() {
                   </div>
                   <div className="flex space-x-2">
                     <Button
-                      onClick={fetchScanResults}
+                      onClick={() => fetchScanResults()}
                       variant="outline"
                       size="sm"
                       className="border-slate-600 text-slate-300 hover:bg-slate-700"
