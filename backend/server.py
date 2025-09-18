@@ -457,17 +457,18 @@ class RValueScanner:
         try:
             # Extract from transaction inputs
             for i, vin in enumerate(tx_data.get("vin", [])):
-                script_sig = vin.get("scriptsig", "")
+                # Get scriptSig (for legacy transactions)
+                script_sig_hex = vin.get("scriptsig", "")
                 witness = vin.get("witness", [])
                 
-                # Parse script signatures (simplified)
-                if script_sig and "legacy" in address_types:
-                    sig_data = await self.parse_script_signature(script_sig, tx_data["txid"], i)
+                # Process legacy P2PKH signatures
+                if script_sig_hex and "legacy" in address_types:
+                    sig_data = await self.parse_legacy_signature(script_sig_hex, tx_data["txid"], i)
                     if sig_data:
                         signatures.append(sig_data)
                 
-                # Parse witness signatures (SegWit)
-                if witness and ("segwit" in address_types or "taproot" in address_types):
+                # Process SegWit signatures
+                if witness and len(witness) >= 2 and ("segwit" in address_types or "taproot" in address_types):
                     sig_data = await self.parse_witness_signature(witness, tx_data["txid"], i)
                     if sig_data:
                         signatures.append(sig_data)
@@ -477,34 +478,59 @@ class RValueScanner:
         
         return signatures
     
-    async def parse_script_signature(self, script_sig: str, tx_id: str, input_index: int) -> Optional[Dict]:
-        """Parse signature from script (simplified)"""
+    async def parse_legacy_signature(self, script_sig_hex: str, tx_id: str, input_index: int) -> Optional[Dict]:
+        """Parse signature from legacy scriptSig"""
         try:
-            # This is a simplified parser - in production, you'd need proper Bitcoin script parsing
-            if len(script_sig) > 140:  # Typical signature + pubkey length
-                # Extract DER signature (first ~70 bytes)
-                der_sig = script_sig[:140]
-                r, s = await self.parse_der_signature(der_sig)
-                if r and s:
-                    return {
-                        "tx_id": tx_id,
-                        "input_index": input_index,
-                        "r": r,
-                        "s": s,
-                        "type": "legacy",
-                        "message_hash": tx_id  # Simplified - should be proper sighash
-                    }
+            if not script_sig_hex or len(script_sig_hex) < 20:
+                return None
+                
+            # Convert hex to bytes
+            script_bytes = bytes.fromhex(script_sig_hex)
+            
+            # Basic parsing: look for DER signature format
+            # DER signatures start with 0x30 (SEQUENCE)
+            for i in range(len(script_bytes) - 8):
+                if script_bytes[i] == 0x30:  # DER SEQUENCE tag
+                    try:
+                        # Try to extract DER signature
+                        der_length = script_bytes[i + 1]
+                        if i + 2 + der_length <= len(script_bytes):
+                            der_sig = script_bytes[i:i + 2 + der_length]
+                            r, s = self.parse_der_signature_bytes(der_sig)
+                            if r and s:
+                                return {
+                                    "tx_id": tx_id,
+                                    "input_index": input_index,
+                                    "r": r,
+                                    "s": s,
+                                    "type": "legacy",
+                                    "message_hash": tx_id[:64]  # Use first 32 bytes of txid as message hash
+                                }
+                    except:
+                        continue
+                        
         except Exception as e:
-            logger.error(f"Error parsing script signature: {e}")
+            logger.error(f"Error parsing legacy signature: {e}")
         return None
     
     async def parse_witness_signature(self, witness: List[str], tx_id: str, input_index: int) -> Optional[Dict]:
         """Parse signature from witness data"""
         try:
-            if len(witness) >= 2:  # Signature + pubkey
-                sig_hex = witness[0]
-                if len(sig_hex) > 140:  # Has signature
-                    r, s = await self.parse_der_signature(sig_hex)
+            if len(witness) < 2:
+                return None
+                
+            # First witness item is usually the signature
+            sig_hex = witness[0]
+            if not sig_hex or len(sig_hex) < 20:
+                return None
+                
+            # Convert hex to bytes
+            sig_bytes = bytes.fromhex(sig_hex)
+            
+            # Look for DER signature
+            if len(sig_bytes) > 8 and sig_bytes[0] == 0x30:
+                try:
+                    r, s = self.parse_der_signature_bytes(sig_bytes[:-1])  # Remove sighash byte
                     if r and s:
                         return {
                             "tx_id": tx_id,
@@ -512,36 +538,60 @@ class RValueScanner:
                             "r": r,
                             "s": s,
                             "type": "segwit",
-                            "message_hash": tx_id  # Simplified
+                            "message_hash": tx_id[:64]  # Use first 32 bytes of txid as message hash
                         }
+                except:
+                    pass
+                    
         except Exception as e:
             logger.error(f"Error parsing witness signature: {e}")
         return None
     
-    async def parse_der_signature(self, der_hex: str) -> tuple:
-        """Parse DER encoded signature to extract r and s values"""
+    def parse_der_signature_bytes(self, der_bytes: bytes) -> tuple:
+        """Parse DER encoded signature bytes to extract r and s values"""
         try:
-            # Simplified DER parsing - in production, use proper DER decoder
-            der_bytes = bytes.fromhex(der_hex)
-            
-            if len(der_bytes) < 8:
+            if len(der_bytes) < 8 or der_bytes[0] != 0x30:
                 return None, None
             
-            # Skip DER header and extract r and s (simplified)
-            r_start = 4
-            r_len = der_bytes[3]
-            s_start = r_start + r_len + 2
-            s_len = der_bytes[s_start - 1]
+            # Skip SEQUENCE tag and length
+            pos = 2
             
-            if r_start + r_len <= len(der_bytes) and s_start + s_len <= len(der_bytes):
-                r = der_bytes[r_start:r_start + r_len].hex()
-                s = der_bytes[s_start:s_start + s_len].hex()
-                return r, s
+            # Parse r value
+            if pos >= len(der_bytes) or der_bytes[pos] != 0x02:
+                return None, None
+            pos += 1
+            
+            r_len = der_bytes[pos]
+            pos += 1
+            
+            if pos + r_len > len(der_bytes):
+                return None, None
+                
+            r_bytes = der_bytes[pos:pos + r_len]
+            pos += r_len
+            
+            # Parse s value
+            if pos >= len(der_bytes) or der_bytes[pos] != 0x02:
+                return None, None
+            pos += 1
+            
+            s_len = der_bytes[pos]
+            pos += 1
+            
+            if pos + s_len > len(der_bytes):
+                return None, None
+                
+            s_bytes = der_bytes[pos:pos + s_len]
+            
+            # Convert to hex strings
+            r = r_bytes.hex()
+            s = s_bytes.hex()
+            
+            return r, s
             
         except Exception as e:
-            logger.error(f"Error parsing DER signature: {e}")
-        
-        return None, None
+            logger.error(f"Error parsing DER signature bytes: {e}")
+            return None, None
     
     async def find_reused_r_values(self, scan_id: str, signatures_by_r: Dict):
         """Find reused R values and recover private keys"""
