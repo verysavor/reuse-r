@@ -660,6 +660,28 @@ class RValueScanner:
             if len(scan_states[scan_id]["logs"]) > 200:
                 scan_states[scan_id]["logs"] = scan_states[scan_id]["logs"][-200:]
 
+class ScanPerformanceConfig(BaseModel):
+    batch_size: int = Field(default=50, ge=1, le=200, description="Blocks per batch")
+    max_concurrent_blocks: int = Field(default=10, ge=1, le=50, description="Parallel blocks per batch")
+    max_concurrent_requests: int = Field(default=20, ge=5, le=100, description="Total concurrent API requests")
+    api_delay_ms: int = Field(default=100, ge=0, le=5000, description="Delay between API calls (ms)")
+
+@api_router.get("/scan/performance-config")
+async def get_performance_config():
+    """Get current performance configuration"""
+    return ScanPerformanceConfig()
+
+@api_router.post("/scan/performance-config")
+async def update_performance_config(config: ScanPerformanceConfig):
+    """Update performance configuration for future scans"""
+    # Update scanner settings
+    if 'scanner' in globals():
+        scanner.batch_size = config.batch_size
+        scanner.max_concurrent_blocks = config.max_concurrent_blocks
+        scanner.api.rate_limit_semaphore = asyncio.Semaphore(config.max_concurrent_requests)
+    
+    return {"message": "Performance configuration updated", "config": config}
+
 # Initialize scanner
 scanner = RValueScanner()
 
