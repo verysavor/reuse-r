@@ -87,7 +87,8 @@ class BitcoinScannerAPITester:
         return False
 
     def test_cryptoapis_integration(self):
-        """Test CryptoAPIs integration status"""
+        """Test CryptoAPIs integration status - CRITICAL TEST"""
+        print(f"\n🔥 CRITICAL: Testing CryptoAPIs Integration (Main Fix)")
         success, response = self.run_test(
             "CryptoAPIs Integration Test",
             "GET",
@@ -99,14 +100,53 @@ class BitcoinScannerAPITester:
             tests = response.get('tests', {})
             print(f"   Has API Key: {has_key}")
             
+            if not has_key:
+                print("❌ CRITICAL: No CryptoAPIs API key found!")
+                return False
+            
+            # Check latest block test
             if 'latest_block' in tests:
                 block_test = tests['latest_block']
-                print(f"   Latest Block Test Success: {block_test.get('success', False)}")
-                print(f"   Status Code: {block_test.get('status_code', 'unknown')}")
-                if not block_test.get('success', False):
+                block_success = block_test.get('success', False)
+                status_code = block_test.get('status_code', 'unknown')
+                
+                print(f"   Latest Block Test Success: {block_success}")
+                print(f"   Status Code: {status_code}")
+                
+                if block_success and status_code == 200:
+                    print("✅ CRITICAL SUCCESS: CryptoAPIs authentication working!")
+                    self.cryptoapis_working = True
+                    
+                    # Check if we got actual block data
+                    if 'data' in block_test:
+                        block_data = block_test['data']
+                        if isinstance(block_data, dict) and 'data' in block_data:
+                            print(f"   Block data received: {str(block_data)[:100]}...")
+                        else:
+                            print(f"   Raw response: {str(block_data)[:100]}...")
+                    
+                    return True
+                else:
+                    print(f"❌ CRITICAL FAILURE: CryptoAPIs authentication failed!")
                     print(f"   Error Response: {block_test.get('response_text', 'No error text')}")
+                    if 'url' in block_test:
+                        print(f"   URL used: {block_test['url']}")
+                    return False
             
-            return True  # Test passes if endpoint responds, regardless of CryptoAPIs status
+            # Check block height test
+            if 'block_height' in tests:
+                height_test = tests['block_height']
+                height_success = height_test.get('success', False)
+                height = height_test.get('height', 0)
+                print(f"   Block Height Test Success: {height_success}")
+                print(f"   Height Retrieved: {height}")
+                
+                if height_success and height > 900000:
+                    print("✅ CryptoAPIs block height retrieval working!")
+                else:
+                    print("❌ CryptoAPIs block height retrieval failed!")
+            
+            return self.cryptoapis_working
         return False
 
     def test_start_scan_single_block(self):
