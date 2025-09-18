@@ -699,8 +699,8 @@ function App() {
                     <Alert className="bg-green-900/30 border-green-700">
                       <CheckCircle className="h-4 w-4" />
                       <AlertDescription className="text-xs text-slate-300">
-                        <strong>Parallel Processing:</strong> Uses 3 high-performance blockchain APIs (Blockstream, Mempool.space & CryptoAPIs) 
-                        with high concurrency limits for maximum scanning speed.
+                        <strong>Parallel Processing:</strong> Uses 2 reliable blockchain APIs (Blockstream & Mempool.space) 
+                        with parallel batch processing for optimal speed and accuracy.
                       </AlertDescription>
                     </Alert>
                   </div>
