@@ -103,11 +103,11 @@ class BlockchainAPI:
         self.rate_limit_semaphore = asyncio.Semaphore(50)  # Higher for CryptoAPIs
         
     def get_next_api(self):
-        """Rotate between APIs with preference for CryptoAPIs due to higher limits"""
+        """Rotate between APIs - temporarily disable CryptoAPIs until 400 errors are fixed"""
         apis = [
-            ("cryptoapis", self.cryptoapis_base),  # Prioritize CryptoAPIs for speed
             ("blockstream", self.blockstream_base),
-            ("mempool", self.mempool_base)
+            ("mempool", self.mempool_base),
+            # ("cryptoapis", self.cryptoapis_base),  # Disabled due to 400 errors
         ]
         api_type, api_base = apis[self.current_api % len(apis)]
         self.current_api += 1
