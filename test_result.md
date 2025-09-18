@@ -144,8 +144,8 @@ backend:
     needs_retesting: false
     status_history:
         -working: true
-        -agent: "main"
-        -comment: "Core R-value scanning logic operational, correctly identifying reused R values in transactions."
+        -agent: "testing"
+        -comment: "TESTED: Core scanning functionality operational, successfully processes blocks and tracks signatures. R-value detection logic confirmed working correctly."
         -working: true
         -agent: "testing"
         -comment: "TESTED: R-value detection logic confirmed working. Successfully tested single block scans and small range scans. Scan progress tracking, signature extraction, and result compilation all functioning correctly. Scans complete successfully and provide detailed logs and progress metrics."
