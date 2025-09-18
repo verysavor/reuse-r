@@ -163,15 +163,32 @@ function App() {
     }
   };
 
-  const fetchScanResults = async () => {
-    if (!currentScan) {
-      console.log('No currentScan ID available for fetchScanResults');
+  const fetchScanResults = async (scanId = null) => {
+    const targetScanId = scanId || currentScan;
+    
+    if (!targetScanId) {
+      console.log('No scan ID available for fetchScanResults');
+      // Try to get the latest scan from the list
+      try {
+        const listResponse = await axios.get(`${API}/scan/list`);
+        const scans = listResponse.data.scans;
+        if (scans && scans.length > 0) {
+          const latestScan = scans[scans.length - 1];
+          console.log('Using latest scan from list:', latestScan.scan_id);
+          const response = await axios.get(`${API}/scan/results/${latestScan.scan_id}`);
+          setScanResults(response.data);
+          setCurrentScan(latestScan.scan_id); // Update the current scan state
+          return;
+        }
+      } catch (listError) {
+        console.error('Could not fetch scan list:', listError);
+      }
       return;
     }
     
     try {
-      console.log('Fetching scan results for:', currentScan);
-      const response = await axios.get(`${API}/scan/results/${currentScan}`);
+      console.log('Fetching scan results for:', targetScanId);
+      const response = await axios.get(`${API}/scan/results/${targetScanId}`);
       console.log('Scan results received:', response.data);
       setScanResults(response.data);
     } catch (error) {
