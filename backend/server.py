@@ -162,7 +162,7 @@ class BlockchainAPI:
             try:
                 url = f"{self.cryptoapis_base}/blocks/latest"
                 headers = {
-                    "x-api-key": self.cryptoapis_key,
+                    "X-API-Key": self.cryptoapis_key,
                     "Content-Type": "application/json"
                 }
                 result = await self.make_request(url, headers)
@@ -199,7 +199,7 @@ class BlockchainAPI:
             if api_type == "cryptoapis" and self.cryptoapis_key:
                 url = f"{api_base}/blocks/{height}"
                 headers = {
-                    "x-api-key": self.cryptoapis_key,
+                    "X-API-Key": self.cryptoapis_key,
                     "Content-Type": "application/json"
                 }
                 result = await self.make_request(url, headers)
@@ -222,7 +222,7 @@ class BlockchainAPI:
             if api_type == "cryptoapis" and self.cryptoapis_key:
                 url = f"{api_base}/blocks/{block_hash}/transactions"
                 headers = {
-                    "x-api-key": self.cryptoapis_key,
+                    "X-API-Key": self.cryptoapis_key,
                     "Content-Type": "application/json"
                 }
                 result = await self.make_request(url, headers)
@@ -246,7 +246,7 @@ class BlockchainAPI:
             if api_type == "cryptoapis" and self.cryptoapis_key:
                 url = f"{api_base}/transactions/{tx_id}"
                 headers = {
-                    "x-api-key": self.cryptoapis_key,
+                    "X-API-Key": self.cryptoapis_key,
                     "Content-Type": "application/json"
                 }
                 result = await self.make_request(url, headers)
