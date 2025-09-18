@@ -128,10 +128,10 @@ class BlockchainAPI:
         self.current_api += 1
         return api_type, api_base
         
-    async def make_request(self, url: str, headers: dict = None, retries: int = 3) -> dict:
-        """Make HTTP request with rate limiting and retries"""
+    async def make_request(self, url: str, headers: dict = None, retries: int = 2) -> dict:
+        """Make HTTP request with minimal delays for maximum speed"""
         async with self.rate_limit_semaphore:
-            timeout = aiohttp.ClientTimeout(total=30)
+            timeout = aiohttp.ClientTimeout(total=15)  # Shorter timeout for speed
             request_headers = headers or {}
             
             for attempt in range(retries):
@@ -148,7 +148,7 @@ class BlockchainAPI:
                                     except:
                                         return text
                             elif resp.status == 429:  # Rate limited
-                                wait_time = min(2 ** attempt, 8)  # Cap at 8 seconds
+                                wait_time = 0.5  # Minimal wait for rate limits
                                 logger.debug(f"Rate limited, waiting {wait_time}s before retry")
                                 await asyncio.sleep(wait_time)
                                 continue
@@ -156,19 +156,15 @@ class BlockchainAPI:
                                 logger.debug(f"API access issue {resp.status} for {url}")
                                 return None  # Don't retry these
                             else:
-                                logger.warning(f"API error {resp.status} for {url}")
-                                if attempt < retries - 1:
-                                    await asyncio.sleep(1)
-                                continue
+                                logger.debug(f"API error {resp.status} for {url}")
+                                continue  # Try next attempt immediately
                                 
                 except asyncio.TimeoutError:
                     logger.debug(f"Request timeout for {url} (attempt {attempt + 1})")
-                    if attempt < retries - 1:
-                        await asyncio.sleep(2 ** attempt)
+                    continue  # Try next attempt immediately
                 except Exception as e:
                     logger.debug(f"Request failed (attempt {attempt + 1}) for {url}: {e}")
-                    if attempt < retries - 1:
-                        await asyncio.sleep(2 ** attempt)
+                    continue  # Try next attempt immediately
                     
             return None
 
