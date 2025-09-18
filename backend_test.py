@@ -84,16 +84,61 @@ class BitcoinScannerAPITester:
             return height > 900000
         return False
 
-    def test_start_scan(self):
-        """Test starting a scan with small block range"""
+    def test_cryptoapis_integration(self):
+        """Test CryptoAPIs integration status"""
+        success, response = self.run_test(
+            "CryptoAPIs Integration Test",
+            "GET",
+            "test-cryptoapis",
+            200
+        )
+        if success:
+            has_key = response.get('has_api_key', False)
+            tests = response.get('tests', {})
+            print(f"   Has API Key: {has_key}")
+            
+            if 'latest_block' in tests:
+                block_test = tests['latest_block']
+                print(f"   Latest Block Test Success: {block_test.get('success', False)}")
+                print(f"   Status Code: {block_test.get('status_code', 'unknown')}")
+                if not block_test.get('success', False):
+                    print(f"   Error Response: {block_test.get('response_text', 'No error text')}")
+            
+            return True  # Test passes if endpoint responds, regardless of CryptoAPIs status
+        return False
+
+    def test_start_scan_single_block(self):
+        """Test starting a scan with single recent block"""
         scan_config = {
-            "start_block": 1,
-            "end_block": 10,
+            "start_block": 915000,
+            "end_block": 915000,
             "address_types": ["legacy", "segwit"]
         }
         
         success, response = self.run_test(
-            "Start Scan",
+            "Start Single Block Scan",
+            "POST",
+            "scan/start",
+            200,
+            data=scan_config
+        )
+        
+        if success and 'scan_id' in response:
+            self.scan_id = response['scan_id']
+            print(f"   Scan ID: {self.scan_id}")
+            return True
+        return False
+
+    def test_start_scan_small_range(self):
+        """Test starting a scan with small block range"""
+        scan_config = {
+            "start_block": 915000,
+            "end_block": 915002,
+            "address_types": ["legacy", "segwit"]
+        }
+        
+        success, response = self.run_test(
+            "Start Small Range Scan",
             "POST",
             "scan/start",
             200,
