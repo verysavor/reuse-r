@@ -263,18 +263,16 @@ class BlockchainAPI:
     def convert_cryptoapis_transaction(self, tx_data: Dict) -> Dict:
         """Convert CryptoAPIs transaction format to standard format"""
         try:
-            # Convert inputs
+            # Convert inputs from CryptoAPIs to standard format
             vin = []
-            for inp in tx_data.get('vin', []):
-                # Handle different possible field names in CryptoAPIs
-                script_sig = inp.get('scriptSig', {})
-                if isinstance(script_sig, dict):
-                    script_hex = script_sig.get('hex', '')
-                else:
-                    script_hex = str(script_sig) if script_sig else ''
+            for inp in tx_data.get('inputs', []):
+                # CryptoAPIs uses different field names
+                script_hex = ''
+                if 'script' in inp and isinstance(inp['script'], dict):
+                    script_hex = inp['script'].get('hex', '')
                 
-                # Handle witness data - CryptoAPIs might use different field names
-                witness_data = inp.get('witnesses', inp.get('witness', []))
+                # Handle witness data from CryptoAPIs
+                witness_data = inp.get('witnesses', [])
                 if not isinstance(witness_data, list):
                     witness_data = []
                 
@@ -284,10 +282,19 @@ class BlockchainAPI:
                 }
                 vin.append(vin_item)
             
+            # Convert outputs from CryptoAPIs format
+            vout = []
+            for out in tx_data.get('outputs', []):
+                vout_item = {
+                    'scriptpubkey': out.get('script', {}).get('hex', '') if isinstance(out.get('script'), dict) else '',
+                    'value': int(float(out.get('value', {}).get('amount', 0)) * 100000000) if out.get('value') else 0  # Convert to satoshis
+                }
+                vout.append(vout_item)
+            
             return {
-                'txid': tx_data.get('transactionId', tx_data.get('hash', '')),
+                'txid': tx_data.get('transactionID', tx_data.get('hash', '')),
                 'vin': vin,
-                'vout': tx_data.get('vout', [])
+                'vout': vout
             }
         except Exception as e:
             logger.error(f"Error converting CryptoAPIs transaction format: {e}")
