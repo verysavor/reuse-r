@@ -55,6 +55,20 @@ class BitcoinScannerAPITester:
             print(f"❌ Failed - Error: {str(e)}")
             return False, {}
 
+    def test_health_check(self):
+        """Test health check endpoint"""
+        success, response = self.run_test(
+            "Health Check",
+            "GET",
+            "health",
+            200
+        )
+        if success and 'status' in response:
+            status = response['status']
+            print(f"   Health status: {status}")
+            return status == 'healthy'
+        return False
+
     def test_current_height(self):
         """Test current blockchain height endpoint"""
         success, response = self.run_test(
@@ -66,7 +80,8 @@ class BitcoinScannerAPITester:
         if success and 'height' in response:
             height = response['height']
             print(f"   Current blockchain height: {height}")
-            return height > 0
+            # Expect height to be around 915000+ as mentioned in review request
+            return height > 900000
         return False
 
     def test_start_scan(self):
