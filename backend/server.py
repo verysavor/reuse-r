@@ -147,6 +147,18 @@ class BlockchainAPI:
     
     async def get_block_height(self) -> int:
         """Get current block height"""
+        # Try CryptoAPIs first (highest limits)
+        if self.cryptoapis_key:
+            try:
+                url = f"{self.cryptoapis_base}/info"
+                headers = {"X-API-Key": self.cryptoapis_key}
+                result = await self.make_request(url, headers)
+                if result and isinstance(result, dict):
+                    return result.get('data', {}).get('item', {}).get('height', 0)
+            except Exception as e:
+                logger.error(f"Error getting block height from CryptoAPIs: {e}")
+        
+        # Fallback to other APIs
         try:
             url = f"{self.blockstream_base}/blocks/tip/height"
             result = await self.make_request(url)
@@ -154,7 +166,6 @@ class BlockchainAPI:
                 return int(result) if isinstance(result, str) else result
         except Exception as e:
             logger.error(f"Error getting block height: {e}")
-            # Fallback to mempool.space
             try:
                 url = f"{self.mempool_base}/blocks/tip/height"
                 result = await self.make_request(url)
