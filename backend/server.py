@@ -103,15 +103,7 @@ class BlockchainAPI:
         ]
         self.current_endpoint = 0
         self.rate_limit_semaphore = asyncio.Semaphore(20)  # Allow 20 concurrent requests
-        self.session = None
         
-    async def get_session(self):
-        """Get or create aiohttp session"""
-        if self.session is None:
-            timeout = aiohttp.ClientTimeout(total=30)
-            self.session = aiohttp.ClientSession(timeout=timeout)
-        return self.session
-    
     def get_next_endpoint(self):
         """Round-robin through API endpoints"""
         endpoint = self.api_endpoints[self.current_endpoint % len(self.api_endpoints)]
@@ -119,30 +111,31 @@ class BlockchainAPI:
         return endpoint
         
     async def make_request(self, url: str, retries: int = 3) -> dict:
-        """Make HTTP request with rate limiting and retries"""
+        """Make HTTP request with rate limiting and retries - creates new session per request"""
         async with self.rate_limit_semaphore:
-            session = await self.get_session()
+            timeout = aiohttp.ClientTimeout(total=30)
             
             for attempt in range(retries):
                 try:
-                    async with session.get(url) as resp:
-                        if resp.status == 200:
-                            if 'application/json' in resp.headers.get('content-type', ''):
-                                return await resp.json()
+                    async with aiohttp.ClientSession(timeout=timeout) as session:
+                        async with session.get(url) as resp:
+                            if resp.status == 200:
+                                if 'application/json' in resp.headers.get('content-type', ''):
+                                    return await resp.json()
+                                else:
+                                    text = await resp.text()
+                                    try:
+                                        return int(text) if text.isdigit() else text
+                                    except:
+                                        return text
+                            elif resp.status == 429:  # Rate limited
+                                await asyncio.sleep(2 ** attempt)  # Exponential backoff
+                                continue
                             else:
-                                text = await resp.text()
-                                try:
-                                    return int(text) if text.isdigit() else text
-                                except:
-                                    return text
-                        elif resp.status == 429:  # Rate limited
-                            await asyncio.sleep(2 ** attempt)  # Exponential backoff
-                            continue
-                        else:
-                            logger.warning(f"API error {resp.status} for {url}")
-                            
+                                logger.warning(f"API error {resp.status} for {url}")
+                                
                 except Exception as e:
-                    logger.warning(f"Request failed (attempt {attempt + 1}): {e}")
+                    logger.warning(f"Request failed (attempt {attempt + 1}) for {url}: {e}")
                     if attempt < retries - 1:
                         await asyncio.sleep(1)
                     
@@ -264,11 +257,6 @@ class BlockchainAPI:
             logger.error(f"Error getting balance for {address}: {e}")
             
         return BalanceCheck(address=address, balance=0.0, confirmed_balance=0.0, unconfirmed_balance=0.0)
-    
-    async def close(self):
-        """Close the session"""
-        if self.session:
-            await self.session.close()
 
 # Cryptographic functions for ECDSA and Bitcoin
 class BitcoinCrypto:
