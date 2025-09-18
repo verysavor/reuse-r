@@ -850,18 +850,31 @@ async def test_cryptoapis():
     if not api.cryptoapis_key:
         return test_results
     
-    # Test 1: Get latest block info
+    # Test 1: Get latest block info with detailed error handling
     try:
         url = f"{api.cryptoapis_base}/blocks/last"
         headers = {
             "x-api-key": api.cryptoapis_key,
             "Content-Type": "application/json"
         }
-        result = await api.make_request(url, headers)
-        test_results["tests"]["latest_block"] = {
-            "success": result is not None,
-            "data": result
-        }
+        
+        # Make direct request with detailed error handling
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, headers=headers) as resp:
+                response_text = await resp.text()
+                test_results["tests"]["latest_block"] = {
+                    "success": resp.status == 200,
+                    "status_code": resp.status,
+                    "response_text": response_text,
+                    "url": url,
+                    "headers_sent": headers
+                }
+                if resp.status == 200:
+                    try:
+                        test_results["tests"]["latest_block"]["data"] = json.loads(response_text)
+                    except:
+                        test_results["tests"]["latest_block"]["data"] = response_text
+                        
     except Exception as e:
         test_results["tests"]["latest_block"] = {
             "success": False,
