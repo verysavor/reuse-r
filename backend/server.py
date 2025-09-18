@@ -160,14 +160,17 @@ class BlockchainAPI:
         # Try CryptoAPIs first (highest limits)
         if self.cryptoapis_key:
             try:
-                url = f"{self.cryptoapis_base}/blocks/last"
+                url = f"{self.cryptoapis_base}/blocks/latest"
                 headers = {
                     "x-api-key": self.cryptoapis_key,
                     "Content-Type": "application/json"
                 }
                 result = await self.make_request(url, headers)
                 if result and isinstance(result, dict):
-                    return result.get('data', {}).get('item', {}).get('height', 0)
+                    # Get the first block from the latest blocks list
+                    blocks = result.get('data', {}).get('items', [])
+                    if blocks:
+                        return blocks[0].get('height', 0)
             except Exception as e:
                 logger.error(f"Error getting block height from CryptoAPIs: {e}")
         
