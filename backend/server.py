@@ -704,11 +704,12 @@ class RValueScanner:
                         for j in range(i + 1, len(signatures)):
                             sig1, sig2 = signatures[i], signatures[j]
                             
-                            # Skip if same transaction (shouldn't happen but be safe)
+                            # Skip if exact same signature (same tx_id AND same input_index)
                             if sig1["tx_id"] == sig2["tx_id"] and sig1["input_index"] == sig2["input_index"]:
                                 continue
                             
-                            await self.add_log(scan_id, f"Attempting key recovery from TXs: {sig1['tx_id'][:16]}... and {sig2['tx_id'][:16]}...")
+                            # This is the vulnerability we're looking for - different messages with same R
+                            await self.add_log(scan_id, f"Attempting key recovery from TX: {sig1['tx_id'][:16]}... input {sig1['input_index']} and TX: {sig2['tx_id'][:16]}... input {sig2['input_index']}")
                             
                             private_key = self.crypto.recover_private_key(
                                 r_value, sig1["s"], sig2["s"],
