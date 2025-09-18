@@ -258,11 +258,17 @@ class BlockchainAPI:
         return []
     
     async def get_transaction(self, tx_id: str) -> Dict:
-        """Get transaction details"""
+        """Get transaction details by transaction ID"""
         api_type, api_base = self.get_next_api()
         
         try:
-            if api_type == "cryptoapis" and self.cryptoapis_key:
+            if api_type == "blockchain_info":
+                url = f"{api_base}/rawtx/{tx_id}"
+                result = await self.make_request(url)
+                if result and isinstance(result, dict):
+                    # Convert blockchain.info format to standard format
+                    return self.convert_blockchain_info_transaction(result)
+            elif api_type == "cryptoapis" and self.cryptoapis_key:
                 url = f"{api_base}/transactions/utxo/bitcoin/mainnet/{tx_id}"
                 headers = {
                     "x-api-key": self.cryptoapis_key,
@@ -273,13 +279,19 @@ class BlockchainAPI:
                     tx_data = result.get('data', {}).get('item', {})
                     # Convert CryptoAPIs format to standard format
                     return self.convert_cryptoapis_transaction(tx_data)
-            else:
+            elif api_type == "blockstream":
+                url = f"{api_base}/tx/{tx_id}"
+                result = await self.make_request(url)
+                if result and isinstance(result, dict):
+                    return result
+            elif api_type == "mempool":
                 url = f"{api_base}/tx/{tx_id}"
                 result = await self.make_request(url)
                 if result and isinstance(result, dict):
                     return result
         except Exception as e:
-            logger.error(f"Error getting transaction {tx_id} from {api_type}: {e}")
+            logger.error(f"Error getting transaction: {e}")
+        
         return {}
     
     def convert_cryptoapis_transaction(self, tx_data: Dict) -> Dict:
