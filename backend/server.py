@@ -157,12 +157,17 @@ class BlockchainAPI:
     
     async def get_block_height(self) -> int:
         """Get current block height"""
-        # Try CryptoAPIs first (highest limits)
+        # Try CryptoAPIs first (highest limits) - Get Last Mined Block
         if self.cryptoapis_key:
             try:
-                # CryptoAPIs doesn't have a direct "current height" endpoint
-                # We'll fall back to other APIs for height and use CryptoAPIs for transaction details
-                pass
+                url = f"{self.cryptoapis_base}/blockchain-data/bitcoin/mainnet/blocks/last"
+                headers = {
+                    "x-api-key": self.cryptoapis_key,
+                    "Content-Type": "application/json"
+                }
+                result = await self.make_request(url, headers)
+                if result and isinstance(result, dict):
+                    return result.get('data', {}).get('item', {}).get('height', 0)
             except Exception as e:
                 logger.error(f"Error getting block height from CryptoAPIs: {e}")
         
