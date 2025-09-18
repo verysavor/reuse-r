@@ -185,18 +185,33 @@ print_header "\n⚙️ Configuration Check..."
 cd ..
 
 # Backend environment
-if [ -f "backend/.env" ]; then
-    print_status "Backend .env file found"
+BACKEND_ENV_PATH="backend/.env"
+if [ -f "$BACKEND_ENV_PATH" ]; then
+    print_status "Backend .env file found at $BACKEND_ENV_PATH"
     
     # Check if MONGO_URL is set to localhost
-    if grep -q "MONGO_URL.*localhost" backend/.env; then
+    if grep -q "MONGO_URL.*localhost" "$BACKEND_ENV_PATH"; then
         print_status "✅ Backend configured for local MongoDB"
     else
         print_warning "Backend .env may not be configured for local development"
     fi
 else
-    print_error "Backend .env file not found"
-    exit 1
+    print_error "Backend .env file not found at $BACKEND_ENV_PATH"
+    print_status "Creating backend .env file..."
+    
+    # Create the missing .env file
+    cat > "$BACKEND_ENV_PATH" << 'EOF'
+MONGO_URL="mongodb://localhost:27017"
+DB_NAME="bitcoin_reused_r_scanner"
+CORS_ORIGINS="*"
+EOF
+    
+    if [ -f "$BACKEND_ENV_PATH" ]; then
+        print_status "✅ Created backend .env file"
+    else
+        print_error "Failed to create backend .env file"
+        exit 1
+    fi
 fi
 
 # Frontend environment
