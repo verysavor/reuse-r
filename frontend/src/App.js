@@ -52,6 +52,12 @@ function App() {
   const [selectedKeys, setSelectedKeys] = useState([]);
   const [balances, setBalances] = useState({});
   const [showBalanceDialog, setShowBalanceDialog] = useState(false);
+  const [performanceConfig, setPerformanceConfig] = useState({
+    batch_size: 50,
+    max_concurrent_blocks: 10,
+    max_concurrent_requests: 20,
+    api_delay_ms: 100
+  });
 
   // Fetch current blockchain height on load
   useEffect(() => {
