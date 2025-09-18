@@ -1004,7 +1004,6 @@ async def check_balances(addresses: List[str]):
         for address in addresses:
             balance = await api.get_address_balance(address)
             balances.append(balance)
-            await asyncio.sleep(0.1)  # Rate limiting
         
         return {"balances": balances}
         
