@@ -229,9 +229,17 @@ class BlockchainAPI:
             if api_type == "blockchain_info":
                 url = f"{api_base}/rawblock/{block_hash}"
                 result = await self.make_request(url)
+                logger.info(f"blockchain.info get_block_transactions result type: {type(result)}")
+                if result:
+                    logger.info(f"blockchain.info result keys: {list(result.keys()) if isinstance(result, dict) else 'Not a dict'}")
                 if result and isinstance(result, dict) and 'tx' in result:
                     transactions = result['tx']
-                    return [tx.get('hash', '') for tx in transactions if tx.get('hash')]
+                    tx_hashes = [tx.get('hash', '') for tx in transactions if tx.get('hash')]
+                    logger.info(f"blockchain.info extracted {len(tx_hashes)} transaction hashes")
+                    return tx_hashes
+                else:
+                    logger.warning(f"blockchain.info get_block_transactions failed - result: {result}")
+                    return []
             elif api_type == "cryptoapis" and self.cryptoapis_key:
                 url = f"{api_base}/blocks/utxo/bitcoin/mainnet/{block_hash}/transactions"
                 headers = {
