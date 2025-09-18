@@ -442,7 +442,7 @@ class RValueScanner:
                 await self.add_log(scan_id, f"Error processing block {block_num}: {str(e)}", "error")
                 return {'block': block_num, 'signatures': []}
     
-    async def process_single_transaction(self, semaphore: asyncio.Semaphore, tx_id: str, address_types: List[str]) -> List[Dict]:
+    async def process_single_transaction(self, semaphore: asyncio.Semaphore, tx_id: str, address_types: List[str], scan_id: str) -> List[Dict]:
         """Process a single transaction with concurrency control"""
         async with semaphore:
             try:
@@ -453,6 +453,10 @@ class RValueScanner:
                 
                 # Extract signatures from transaction
                 signatures = await self.extract_signatures(tx_data, address_types)
+                
+                if signatures:
+                    await self.add_log(scan_id, f"Found {len(signatures)} signatures in tx {tx_id[:16]}...")
+                
                 return signatures
                 
             except Exception as e:
