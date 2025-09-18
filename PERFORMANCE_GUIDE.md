@@ -27,10 +27,10 @@ The Bitcoin Reused-R Scanner now includes advanced parallel processing capabilit
 
 | Block Range | Sequential Time | Parallel Time | Speed Improvement |
 |-------------|----------------|---------------|-------------------|
-| 100 blocks  | ~5-10 minutes  | ~30-60 seconds | **5-10x faster** |
-| 1,000 blocks | ~50-90 minutes | ~2-5 minutes | **10-18x faster** |
-| 10,000 blocks | ~8-15 hours | ~20-50 minutes | **16-24x faster** |
-| 100,000 blocks | ~3-6 days | ~3-8 hours | **16-24x faster** |
+| 100 blocks  | ~5-10 minutes  | ~20-40 seconds | **8-15x faster** |
+| 1,000 blocks | ~50-90 minutes | ~1-3 minutes | **17-30x faster** |
+| 10,000 blocks | ~8-15 hours | ~10-30 minutes | **20-45x faster** |
+| 100,000 blocks | ~3-6 days | ~2-5 hours | **24-48x faster** |
 
 *Note: Actual performance depends on API response times and network conditions*
 
