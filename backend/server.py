@@ -108,18 +108,23 @@ class BlockchainAPI:
         self.mempool_semaphore = asyncio.Semaphore(30) 
         self.cryptoapis_semaphore = asyncio.Semaphore(40)  # Higher limit for paid API
         
-    def get_next_api(self):
-        """Rotate through available APIs for load balancing"""
+    def get_available_apis(self):
+        """Get all available APIs for parallel processing"""
         apis = [
-            ("blockstream", self.blockstream_base),
-            ("mempool", self.mempool_base),
+            ("blockstream", self.blockstream_base, self.blockstream_semaphore),
+            ("mempool", self.mempool_base, self.mempool_semaphore),
         ]
         
         # Include CryptoAPIs if we have a valid key
         if self.cryptoapis_key:
-            apis.append(("cryptoapis", self.cryptoapis_base))
+            apis.append(("cryptoapis", self.cryptoapis_base, self.cryptoapis_semaphore))
         
-        api_type, api_base = apis[self.current_api % len(apis)]
+        return apis
+    
+    def get_next_api(self):
+        """Rotate through available APIs for load balancing (legacy method)"""
+        apis = self.get_available_apis()
+        api_type, api_base, _ = apis[self.current_api % len(apis)]
         self.current_api += 1
         return api_type, api_base
         
