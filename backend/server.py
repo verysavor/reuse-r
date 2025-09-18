@@ -151,7 +151,7 @@ class BlockchainAPI:
         if self.cryptoapis_key:
             try:
                 url = f"{self.cryptoapis_base}/info"
-                headers = {"X-API-Key": self.cryptoapis_key}
+                headers = {"Authorization": f"ApiKey {self.cryptoapis_key}"}
                 result = await self.make_request(url, headers)
                 if result and isinstance(result, dict):
                     return result.get('data', {}).get('item', {}).get('height', 0)
