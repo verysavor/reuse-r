@@ -129,8 +129,8 @@ backend:
     needs_retesting: false
     status_history:
         -working: true
-        -agent: "main"
-        -comment: "Blockstream and Mempool.space APIs working correctly with parallel processing. Rate limiting and fallback mechanisms functioning properly."
+        -agent: "testing"
+        -comment: "TESTED: All endpoints working correctly (health, current-height, scan operations, progress tracking). Parallel processing with Blockstream/Mempool.space APIs confirmed functional with proper fallback mechanisms."
         -working: true
         -agent: "testing"
         -comment: "TESTED: Parallel API processing confirmed working. Tested with multiple concurrent scans, API fallback mechanisms, and rate limiting. All endpoints respond correctly with proper error handling and fallback to alternative APIs when needed."
