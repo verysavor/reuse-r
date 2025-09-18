@@ -392,6 +392,35 @@ class BitcoinScannerAPITester:
         else:
             print(f"   ❌ Failed to start parallel processing scan")
             return False
+
+    def test_invalid_endpoints(self):
+        """Test error handling with invalid requests"""
+        print(f"\n🔍 Testing Error Handling...")
+        
+        # Test invalid scan ID
+        success, _ = self.run_test(
+            "Invalid Scan Progress",
+            "GET",
+            "scan/progress/invalid-scan-id",
+            404
+        )
+        
+        # Test invalid scan config
+        invalid_config = {
+            "start_block": 100,
+            "end_block": 50,  # End block less than start block
+            "address_types": ["legacy"]
+        }
+        
+        success2, _ = self.run_test(
+            "Invalid Scan Config",
+            "POST",
+            "scan/start",
+            400,
+            data=invalid_config
+        )
+        
+        return success and success2
         """Test error handling with invalid requests"""
         print(f"\n🔍 Testing Error Handling...")
         
