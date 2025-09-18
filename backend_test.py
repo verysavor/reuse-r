@@ -2,15 +2,29 @@ import requests
 import sys
 import time
 import json
+import os
 from datetime import datetime
+from pathlib import Path
 
 class BitcoinScannerAPITester:
-    def __init__(self, base_url="https://btc-sig-analyzer.preview.emergentagent.com"):
+    def __init__(self):
+        # Load the correct URL from frontend/.env
+        frontend_env_path = Path(__file__).parent / "frontend" / ".env"
+        base_url = "http://localhost:8001"  # Default fallback
+        
+        if frontend_env_path.exists():
+            with open(frontend_env_path, 'r') as f:
+                for line in f:
+                    if line.startswith('REACT_APP_BACKEND_URL='):
+                        base_url = line.split('=', 1)[1].strip()
+                        break
+        
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.tests_run = 0
         self.tests_passed = 0
         self.scan_id = None
+        print(f"🔗 Using backend URL: {self.base_url}")
 
     def run_test(self, name, method, endpoint, expected_status, data=None, timeout=30):
         """Run a single API test"""
