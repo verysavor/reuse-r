@@ -199,11 +199,12 @@ class BlockchainAPI:
             
             # Cancel pending tasks
             for task in pending:
-                task.cancel()
-                try:
-                    await task
-                except asyncio.CancelledError:
-                    pass
+                if isinstance(task, asyncio.Task):
+                    task.cancel()
+                    try:
+                        await task
+                    except asyncio.CancelledError:
+                        pass
             
             # Check completed tasks for successful result
             for task in done:
