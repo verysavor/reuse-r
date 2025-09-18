@@ -97,13 +97,13 @@ class BlockchainAPI:
     def __init__(self):
         self.blockstream_base = "https://blockstream.info/api"
         self.mempool_base = "https://mempool.space/api"
-        self.cryptoapis_base = "https://rest.cryptoapis.io/v2"
+        self.cryptoapis_base = "https://rest.cryptoapis.io"
         self.cryptoapis_key = os.environ.get('CRYPTOAPIS_API_KEY')
         self.current_api = 0
         self.rate_limit_semaphore = asyncio.Semaphore(15)  # Reduced to avoid overwhelming APIs
         
     def get_next_api(self):
-        """Use all available APIs including CryptoAPIs with correct authentication"""
+        """Use all available APIs including CryptoAPIs with correct endpoint structure"""
         apis = [
             ("blockstream", self.blockstream_base),
             ("mempool", self.mempool_base),
@@ -160,14 +160,9 @@ class BlockchainAPI:
         # Try CryptoAPIs first (highest limits)
         if self.cryptoapis_key:
             try:
-                url = f"{self.cryptoapis_base}/blocks/last"
-                headers = {
-                    "x-api-key": self.cryptoapis_key,
-                    "Content-Type": "application/json"
-                }
-                result = await self.make_request(url, headers)
-                if result and isinstance(result, dict):
-                    return result.get('data', {}).get('item', {}).get('height', 0)
+                # CryptoAPIs doesn't have a direct "current height" endpoint
+                # We'll fall back to other APIs for height and use CryptoAPIs for transaction details
+                pass
             except Exception as e:
                 logger.error(f"Error getting block height from CryptoAPIs: {e}")
         
@@ -194,7 +189,7 @@ class BlockchainAPI:
         
         try:
             if api_type == "cryptoapis" and self.cryptoapis_key:
-                url = f"{api_base}/blocks/{height}"
+                url = f"{api_base}/blockchain-data/bitcoin/mainnet/blocks/{height}"
                 headers = {
                     "x-api-key": self.cryptoapis_key,
                     "Content-Type": "application/json"
@@ -217,7 +212,7 @@ class BlockchainAPI:
         
         try:
             if api_type == "cryptoapis" and self.cryptoapis_key:
-                url = f"{api_base}/blocks/{block_hash}/transactions"
+                url = f"{api_base}/blockchain-data/bitcoin/mainnet/blocks/{block_hash}/transactions"
                 headers = {
                     "x-api-key": self.cryptoapis_key,
                     "Content-Type": "application/json"
@@ -241,7 +236,7 @@ class BlockchainAPI:
         
         try:
             if api_type == "cryptoapis" and self.cryptoapis_key:
-                url = f"{api_base}/transactions/{tx_id}"
+                url = f"{api_base}/transactions/utxo/bitcoin/mainnet/{tx_id}"
                 headers = {
                     "x-api-key": self.cryptoapis_key,
                     "Content-Type": "application/json"
@@ -852,7 +847,7 @@ async def test_cryptoapis():
     
     # Test 1: Get latest block info with detailed error handling
     try:
-        url = f"{api.cryptoapis_base}/blocks/last"
+        url = f"{api.cryptoapis_base}/blockchain-data/bitcoin/mainnet/blocks/915000"
         headers = {
             "x-api-key": api.cryptoapis_key,
             "Content-Type": "application/json"

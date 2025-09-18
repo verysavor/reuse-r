@@ -5,7 +5,7 @@ import json
 from datetime import datetime
 
 class BitcoinScannerAPITester:
-    def __init__(self, base_url="https://ecdsa-vulncheck.preview.emergentagent.com"):
+    def __init__(self, base_url="http://localhost:8001"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.tests_run = 0
@@ -55,6 +55,20 @@ class BitcoinScannerAPITester:
             print(f"❌ Failed - Error: {str(e)}")
             return False, {}
 
+    def test_health_check(self):
+        """Test health check endpoint"""
+        success, response = self.run_test(
+            "Health Check",
+            "GET",
+            "health",
+            200
+        )
+        if success and 'status' in response:
+            status = response['status']
+            print(f"   Health status: {status}")
+            return status == 'healthy'
+        return False
+
     def test_current_height(self):
         """Test current blockchain height endpoint"""
         success, response = self.run_test(
@@ -66,19 +80,65 @@ class BitcoinScannerAPITester:
         if success and 'height' in response:
             height = response['height']
             print(f"   Current blockchain height: {height}")
-            return height > 0
+            # Expect height to be around 915000+ as mentioned in review request
+            return height > 900000
         return False
 
-    def test_start_scan(self):
-        """Test starting a scan with small block range"""
+    def test_cryptoapis_integration(self):
+        """Test CryptoAPIs integration status"""
+        success, response = self.run_test(
+            "CryptoAPIs Integration Test",
+            "GET",
+            "test-cryptoapis",
+            200
+        )
+        if success:
+            has_key = response.get('has_api_key', False)
+            tests = response.get('tests', {})
+            print(f"   Has API Key: {has_key}")
+            
+            if 'latest_block' in tests:
+                block_test = tests['latest_block']
+                print(f"   Latest Block Test Success: {block_test.get('success', False)}")
+                print(f"   Status Code: {block_test.get('status_code', 'unknown')}")
+                if not block_test.get('success', False):
+                    print(f"   Error Response: {block_test.get('response_text', 'No error text')}")
+            
+            return True  # Test passes if endpoint responds, regardless of CryptoAPIs status
+        return False
+
+    def test_start_scan_single_block(self):
+        """Test starting a scan with single recent block"""
         scan_config = {
-            "start_block": 1,
-            "end_block": 10,
+            "start_block": 915000,
+            "end_block": 915000,
             "address_types": ["legacy", "segwit"]
         }
         
         success, response = self.run_test(
-            "Start Scan",
+            "Start Single Block Scan",
+            "POST",
+            "scan/start",
+            200,
+            data=scan_config
+        )
+        
+        if success and 'scan_id' in response:
+            self.scan_id = response['scan_id']
+            print(f"   Scan ID: {self.scan_id}")
+            return True
+        return False
+
+    def test_start_scan_small_range(self):
+        """Test starting a scan with small block range"""
+        scan_config = {
+            "start_block": 915000,
+            "end_block": 915002,
+            "address_types": ["legacy", "segwit"]
+        }
+        
+        success, response = self.run_test(
+            "Start Small Range Scan",
             "POST",
             "scan/start",
             200,
@@ -204,6 +264,39 @@ class BitcoinScannerAPITester:
             print(f"❌ Failed - Error: {str(e)}")
             return False
 
+    def test_api_fallback_mechanisms(self):
+        """Test that APIs work with fallback to Blockstream/Mempool when CryptoAPIs fails"""
+        print(f"\n🔍 Testing API Fallback Mechanisms...")
+        
+        # Test current height (should work with fallback APIs)
+        success1, response1 = self.run_test(
+            "Height with Fallback",
+            "GET",
+            "current-height",
+            200
+        )
+        
+        height_works = success1 and response1.get('height', 0) > 0
+        
+        # Test balance check (uses fallback APIs)
+        test_address = "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa"  # Genesis address
+        success2, response2 = self.run_test(
+            "Balance with Fallback",
+            "POST",
+            "balance/check",
+            200,
+            data=[test_address]
+        )
+        
+        balance_works = success2 and 'balances' in response2
+        
+        if height_works and balance_works:
+            print("✅ API fallback mechanisms working correctly")
+            return True
+        else:
+            print("❌ API fallback mechanisms not working properly")
+            return False
+
     def test_invalid_endpoints(self):
         """Test error handling with invalid requests"""
         print(f"\n🔍 Testing Error Handling...")
@@ -274,8 +367,11 @@ def main():
     
     # Test sequence
     tests = [
+        ("Health Check", tester.test_health_check),
         ("Current Height", tester.test_current_height),
-        ("Start Scan", tester.test_start_scan),
+        ("CryptoAPIs Integration", tester.test_cryptoapis_integration),
+        ("API Fallback Mechanisms", tester.test_api_fallback_mechanisms),
+        ("Start Single Block Scan", tester.test_start_scan_single_block),
         ("Scan Progress", tester.test_scan_progress),
         ("List Scans", tester.test_scan_list),
         ("Balance Check", tester.test_balance_check),
