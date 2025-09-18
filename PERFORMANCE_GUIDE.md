@@ -15,7 +15,7 @@ The Bitcoin Reused-R Scanner now includes advanced parallel processing capabilit
 #### **2. Parallel Batch Processing**
 - **Batch size**: 50 blocks processed simultaneously (configurable)
 - **Concurrent blocks**: Up to 10 blocks processed in parallel per batch
-- **Concurrent requests**: Up to 20 API requests simultaneously
+- **Concurrent requests**: Up to 50 API requests simultaneously (increased for CryptoAPIs)
 - **Session management**: Individual sessions per request to prevent conflicts
 
 #### **3. Performance Monitoring**
