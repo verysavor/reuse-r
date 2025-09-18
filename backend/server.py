@@ -537,64 +537,53 @@ class RValueScanner:
         self.max_concurrent_transactions = 50  # Reduced to avoid overwhelming APIs
     
     async def scan_blocks(self, scan_id: str, start_block: int, end_block: int, address_types: List[str]):
-        """Main scanning function with parallel processing"""
+        """Main scanning function with simplified sequential block processing"""
         try:
-            scan_states[scan_id]["status"] = "running"
-            scan_states[scan_id]["current_block"] = start_block
-            scan_states[scan_id]["total_blocks"] = end_block - start_block + 1
-            
-            signatures_by_r = {}  # Group signatures by R value
             total_blocks = end_block - start_block + 1
+            signatures_by_r = {}  # Store signatures grouped by R value
             
-            # Process blocks in parallel batches
-            for batch_start in range(start_block, end_block + 1, self.batch_size):
-                if scan_states[scan_id]["status"] == "stopped":
-                    break
-                
-                batch_end = min(batch_start + self.batch_size - 1, end_block)
-                await self.add_log(scan_id, f"Processing batch: blocks {batch_start} to {batch_end}")
-                
-                # Create semaphore for this batch
-                semaphore = asyncio.Semaphore(self.max_concurrent_blocks)
-                
-                # Create tasks for parallel block processing
-                tasks = []
-                for block_num in range(batch_start, batch_end + 1):
-                    if scan_states[scan_id]["status"] == "stopped":
-                        break
-                    task = self.process_single_block(semaphore, scan_id, block_num, address_types)
-                    tasks.append(task)
-                
-                # Execute batch in parallel
-                batch_results = await asyncio.gather(*tasks, return_exceptions=True)
-                
-                # Collect signatures from batch results
-                for result in batch_results:
-                    if isinstance(result, dict) and 'signatures' in result:
-                        block_signatures = result['signatures']
-                        for sig in block_signatures:
-                            r_value = sig["r"]
-                            if r_value not in signatures_by_r:
-                                signatures_by_r[r_value] = []
-                            signatures_by_r[r_value].append(sig)
+            await self.add_log(scan_id, f"Starting scan from block {start_block} to {end_block} ({total_blocks} blocks)")
+            
+            # Process blocks sequentially but with parallel transaction processing within each block
+            semaphore = asyncio.Semaphore(self.max_concurrent_transactions)
+            
+            for current_block in range(start_block, end_block + 1):
+                try:
+                    await self.add_log(scan_id, f"Processing block {current_block}...")
+                    
+                    # Process single block
+                    block_result = await self.process_single_block(semaphore, scan_id, current_block, address_types)
+                    
+                    if isinstance(block_result, dict) and 'signatures' in block_result:
+                        block_signatures = block_result['signatures']
                         
+                        # Group signatures by R value
+                        for sig in block_signatures:
+                            r_value = sig.get('r_value')
+                            if r_value:
+                                if r_value not in signatures_by_r:
+                                    signatures_by_r[r_value] = []
+                                signatures_by_r[r_value].append(sig)
+                        
+                        # Update progress immediately after each block
+                        blocks_processed = current_block - start_block + 1
+                        scan_states[scan_id]["blocks_scanned"] = blocks_processed
+                        scan_states[scan_id]["current_block"] = current_block
+                        scan_states[scan_id]["progress_percentage"] = (blocks_processed / total_blocks) * 100
                         scan_states[scan_id]["signatures_found"] += len(block_signatures)
-                    elif isinstance(result, Exception):
-                        # Count exceptions as errors
+                        
+                        await self.add_log(scan_id, f"Block {current_block} complete: {len(block_signatures)} signatures found")
+                        
+                    else:
+                        await self.add_log(scan_id, f"Block {current_block} failed or returned no data", "warning")
                         scan_states[scan_id]["errors_encountered"] = scan_states[scan_id].get("errors_encountered", 0) + 1
-                        await self.add_log(scan_id, f"Batch processing error: {str(result)}", "error")
                 
-                # Update progress
-                blocks_processed = min(batch_end - start_block + 1, total_blocks)
-                scan_states[scan_id]["blocks_scanned"] = blocks_processed
-                scan_states[scan_id]["current_block"] = batch_end
-                scan_states[scan_id]["progress_percentage"] = (blocks_processed / total_blocks) * 100
+                except Exception as e:
+                    await self.add_log(scan_id, f"Error processing block {current_block}: {str(e)}", "error")
+                    scan_states[scan_id]["errors_encountered"] = scan_states[scan_id].get("errors_encountered", 0) + 1
                 
-                await self.add_log(scan_id, f"Batch complete: {len([r for r in signatures_by_r.values() if len(r) > 1])} reused R values found so far")
-                
-                # Progress update with small delay to prevent API overwhelming
-                progress = (batch_end - start_block + 1) / total_blocks * 100
-                await asyncio.sleep(0.1)  # Small delay between batches
+                # Small delay to prevent overwhelming APIs
+                await asyncio.sleep(0.05)
             
             # Find reused R values and recover private keys
             await self.find_reused_r_values(scan_id, signatures_by_r)
