@@ -169,7 +169,7 @@ class BlockchainAPI:
             return None
 
     async def make_parallel_api_request(self, endpoint_func, *args):
-        """Make requests to all available APIs in parallel and return first successful result"""
+        """Make requests to all available APIs in parallel with optimized speed"""
         apis = self.get_available_apis()
         
         async def try_api(api_type, api_base, semaphore):
@@ -186,21 +186,17 @@ class BlockchainAPI:
                  for api_type, api_base, semaphore in apis]
         
         try:
-            # Wait for first successful result or timeout
+            # Wait for first successful result with shorter timeout for speed
             done, pending = await asyncio.wait(
                 tasks, 
-                timeout=30.0,
+                timeout=10.0,  # Reduced timeout for speed
                 return_when=asyncio.FIRST_COMPLETED
             )
             
-            # Cancel pending tasks
+            # Cancel pending tasks immediately
             for task in pending:
                 if isinstance(task, asyncio.Task):
                     task.cancel()
-                    try:
-                        await task
-                    except asyncio.CancelledError:
-                        pass
             
             # Check completed tasks for successful result
             for task in done:
@@ -220,10 +216,6 @@ class BlockchainAPI:
             for task in tasks:
                 if isinstance(task, asyncio.Task) and not task.done():
                     task.cancel()
-                    try:
-                        await task
-                    except asyncio.CancelledError:
-                        pass
             return None
     
     async def get_block_height(self) -> int:
