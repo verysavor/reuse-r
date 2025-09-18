@@ -30,7 +30,8 @@ import {
   TrendingUp,
   Eye,
   Key,
-  Coins
+  Coins,
+  RefreshCw
 } from 'lucide-react';
 import './App.css';
 
