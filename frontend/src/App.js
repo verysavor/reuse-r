@@ -616,6 +616,122 @@ function App() {
               </CardContent>
             </Card>
           </TabsContent>
+          {/* Performance Tab */}
+          <TabsContent value="performance" className="space-y-6">
+            <Card className="bg-slate-800/50 border-slate-700">
+              <CardHeader>
+                <CardTitle className="text-white flex items-center space-x-2">
+                  <TrendingUp className="h-5 w-5" />
+                  <span>Performance Configuration</span>
+                </CardTitle>
+                <CardDescription className="text-slate-400">
+                  Optimize scanning speed with parallel processing settings
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <Alert className="bg-blue-900/30 border-blue-700">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription className="text-slate-300">
+                    <strong>High-Speed Scanning:</strong> This scanner uses advanced parallel processing with multiple blockchain APIs 
+                    to scan thousands of blocks quickly. Adjust settings below for optimal performance.
+                  </AlertDescription>
+                </Alert>
+                
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-white">Current Performance</h3>
+                    
+                    {scanProgress && (
+                      <div className="space-y-3">
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Speed:</span>
+                          <span className="text-green-400 font-mono">
+                            {scanProgress.blocks_per_minute?.toFixed(1) || '0.0'} blocks/min
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Time Remaining:</span>
+                          <span className="text-cyan-400">
+                            {scanProgress.estimated_time_remaining || 'Unknown'}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">API Calls:</span>
+                          <span className="text-yellow-400">{scanProgress.api_calls_made || 0}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-slate-400">Errors:</span>
+                          <span className="text-red-400">{scanProgress.errors_encountered || 0}</span>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {!scanProgress && (
+                      <div className="text-slate-500 text-sm">
+                        Performance metrics available during active scans
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-semibold text-white">Speed Estimates</h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">1,000 blocks:</span>
+                        <span className="text-green-400">~2-5 minutes</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">10,000 blocks:</span>
+                        <span className="text-yellow-400">~20-50 minutes</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-400">100,000 blocks:</span>
+                        <span className="text-orange-400">~3-8 hours</span>
+                      </div>
+                    </div>
+                    
+                    <Alert className="bg-green-900/30 border-green-700">
+                      <CheckCircle className="h-4 w-4" />
+                      <AlertDescription className="text-xs text-slate-300">
+                        <strong>Parallel Processing:</strong> Uses multiple blockchain APIs (Blockstream, Mempool.space, BlockCypher) 
+                        with concurrent requests for maximum speed.
+                      </AlertDescription>
+                    </Alert>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-3 gap-4">
+                  <Card className="bg-slate-700/30 border-slate-600 p-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-400">3</div>
+                      <div className="text-xs text-slate-400">Blockchain APIs</div>
+                    </div>
+                  </Card>
+                  <Card className="bg-slate-700/30 border-slate-600 p-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-400">50</div>
+                      <div className="text-xs text-slate-400">Blocks per Batch</div>
+                    </div>
+                  </Card>
+                  <Card className="bg-slate-700/30 border-slate-600 p-4">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-purple-400">20</div>
+                      <div className="text-xs text-slate-400">Concurrent Requests</div>
+                    </div>
+                  </Card>
+                </div>
+                
+                <Alert className="bg-yellow-900/30 border-yellow-700">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription className="text-slate-300">
+                    <strong>For Large Scans (10,000+ blocks):</strong> The scanner automatically handles rate limiting 
+                    and API rotation to maintain optimal speed without overwhelming blockchain APIs.
+                  </AlertDescription>
+                </Alert>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
         </Tabs>
 
         {/* Balance Check Dialog */}
