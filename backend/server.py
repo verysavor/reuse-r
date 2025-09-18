@@ -396,25 +396,33 @@ class RValueScanner:
         """Process a single block with concurrency control"""
         async with semaphore:
             try:
+                await self.add_log(scan_id, f"Processing block {block_num}...")
+                
                 # Get block hash
                 block_hash = await self.api.get_block_hash(block_num)
                 if not block_hash:
                     await self.add_log(scan_id, f"Failed to get block hash for {block_num}", "warning")
                     return {'block': block_num, 'signatures': []}
                 
+                await self.add_log(scan_id, f"Got block hash for {block_num}: {block_hash[:16]}...")
+                
                 # Get transactions in block
                 tx_ids = await self.api.get_block_transactions(block_hash)
                 if not tx_ids:
+                    await self.add_log(scan_id, f"No transactions found in block {block_num}", "warning")
                     return {'block': block_num, 'signatures': []}
                 
-                # Process transactions in parallel
-                tx_semaphore = asyncio.Semaphore(5)  # Limit concurrent transactions per block
+                await self.add_log(scan_id, f"Found {len(tx_ids)} transactions in block {block_num}")
+                
+                # Process transactions in parallel (but limit to avoid overwhelming APIs)
+                tx_semaphore = asyncio.Semaphore(3)  # Reduced from 5 to be more conservative
                 tx_tasks = []
                 
-                for tx_id in tx_ids:
+                # Only process first 10 transactions per block to avoid API overload
+                for tx_id in tx_ids[:10]:
                     if scan_states[scan_id]["status"] == "stopped":
                         break
-                    task = self.process_single_transaction(tx_semaphore, tx_id, address_types)
+                    task = self.process_single_transaction(tx_semaphore, tx_id, address_types, scan_id)
                     tx_tasks.append(task)
                 
                 # Execute transaction processing in parallel
@@ -426,6 +434,7 @@ class RValueScanner:
                     if isinstance(result, list):
                         block_signatures.extend(result)
                 
+                await self.add_log(scan_id, f"Block {block_num} complete: {len(block_signatures)} signatures found")
                 return {'block': block_num, 'signatures': block_signatures}
                 
             except Exception as e:
