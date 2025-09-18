@@ -5,7 +5,7 @@ import json
 from datetime import datetime
 
 class BitcoinScannerAPITester:
-    def __init__(self, base_url="https://reused-r-finder.preview.emergentagent.com"):
+    def __init__(self, base_url="https://ecdsa-vulncheck.preview.emergentagent.com"):
         self.base_url = base_url
         self.api_url = f"{base_url}/api"
         self.tests_run = 0
