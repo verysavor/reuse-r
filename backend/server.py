@@ -244,19 +244,32 @@ class BlockchainAPI:
             # Convert inputs
             vin = []
             for inp in tx_data.get('vin', []):
+                # Handle different possible field names in CryptoAPIs
+                script_sig = inp.get('scriptSig', {})
+                if isinstance(script_sig, dict):
+                    script_hex = script_sig.get('hex', '')
+                else:
+                    script_hex = str(script_sig) if script_sig else ''
+                
+                # Handle witness data - CryptoAPIs might use different field names
+                witness_data = inp.get('witnesses', inp.get('witness', []))
+                if not isinstance(witness_data, list):
+                    witness_data = []
+                
                 vin_item = {
-                    'scriptsig': inp.get('scriptSig', {}).get('hex', ''),
-                    'witness': inp.get('witnesses', [])  # Fixed: CryptoAPIs uses 'witnesses' not 'witness'
+                    'scriptsig': script_hex,
+                    'witness': witness_data
                 }
                 vin.append(vin_item)
             
             return {
-                'txid': tx_data.get('transactionId', ''),
+                'txid': tx_data.get('transactionId', tx_data.get('hash', '')),
                 'vin': vin,
                 'vout': tx_data.get('vout', [])
             }
         except Exception as e:
             logger.error(f"Error converting CryptoAPIs transaction format: {e}")
+            logger.error(f"Raw CryptoAPIs data: {tx_data}")
             return {}
     
     async def get_address_balance(self, address: str) -> BalanceCheck:
