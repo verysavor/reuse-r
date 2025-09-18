@@ -147,6 +147,18 @@ class BlockchainAPI:
     
     async def get_block_height(self) -> int:
         """Get current block height"""
+        # Try CryptoAPIs first (highest limits)
+        if self.cryptoapis_key:
+            try:
+                url = f"{self.cryptoapis_base}/info"
+                headers = {"X-API-Key": self.cryptoapis_key}
+                result = await self.make_request(url, headers)
+                if result and isinstance(result, dict):
+                    return result.get('data', {}).get('item', {}).get('height', 0)
+            except Exception as e:
+                logger.error(f"Error getting block height from CryptoAPIs: {e}")
+        
+        # Fallback to other APIs
         try:
             url = f"{self.blockstream_base}/blocks/tip/height"
             result = await self.make_request(url)
@@ -166,62 +178,127 @@ class BlockchainAPI:
     
     async def get_block_hash(self, height: int) -> str:
         """Get block hash by height"""
-        api_base = self.get_next_api()
+        api_type, api_base = self.get_next_api()
+        
         try:
-            url = f"{api_base}/block-height/{height}"
-            result = await self.make_request(url)
-            if result:
-                return str(result)
+            if api_type == "cryptoapis" and self.cryptoapis_key:
+                url = f"{api_base}/blocks/{height}"
+                headers = {"X-API-Key": self.cryptoapis_key}
+                result = await self.make_request(url, headers)
+                if result and isinstance(result, dict):
+                    return result.get('data', {}).get('item', {}).get('hash', '')
+            else:
+                url = f"{api_base}/block-height/{height}"
+                result = await self.make_request(url)
+                if result:
+                    return str(result)
         except Exception as e:
             logger.error(f"Error getting block hash for height {height}: {e}")
         return ""
     
     async def get_block_transactions(self, block_hash: str) -> List[str]:
         """Get transaction IDs in a block"""
-        api_base = self.get_next_api()
+        api_type, api_base = self.get_next_api()
+        
         try:
-            url = f"{api_base}/block/{block_hash}/txids"
-            result = await self.make_request(url)
-            if result and isinstance(result, list):
-                return result
+            if api_type == "cryptoapis" and self.cryptoapis_key:
+                url = f"{api_base}/blocks/{block_hash}/transactions"
+                headers = {"X-API-Key": self.cryptoapis_key}
+                result = await self.make_request(url, headers)
+                if result and isinstance(result, dict):
+                    transactions = result.get('data', {}).get('items', [])
+                    return [tx.get('transactionId', '') for tx in transactions if tx.get('transactionId')]
+            else:
+                url = f"{api_base}/block/{block_hash}/txids"
+                result = await self.make_request(url)
+                if result and isinstance(result, list):
+                    return result
         except Exception as e:
             logger.error(f"Error getting block transactions: {e}")
         return []
     
     async def get_transaction(self, tx_id: str) -> Dict:
         """Get transaction details"""
-        api_base = self.get_next_api()
+        api_type, api_base = self.get_next_api()
+        
         try:
-            url = f"{api_base}/tx/{tx_id}"
-            result = await self.make_request(url)
-            if result and isinstance(result, dict):
-                return result
+            if api_type == "cryptoapis" and self.cryptoapis_key:
+                url = f"{api_base}/transactions/{tx_id}"
+                headers = {"X-API-Key": self.cryptoapis_key}
+                result = await self.make_request(url, headers)
+                if result and isinstance(result, dict):
+                    tx_data = result.get('data', {}).get('item', {})
+                    # Convert CryptoAPIs format to standard format
+                    return self.convert_cryptoapis_transaction(tx_data)
+            else:
+                url = f"{api_base}/tx/{tx_id}"
+                result = await self.make_request(url)
+                if result and isinstance(result, dict):
+                    return result
         except Exception as e:
             logger.error(f"Error getting transaction {tx_id}: {e}")
         return {}
     
+    def convert_cryptoapis_transaction(self, tx_data: Dict) -> Dict:
+        """Convert CryptoAPIs transaction format to standard format"""
+        try:
+            # Convert inputs
+            vin = []
+            for inp in tx_data.get('vin', []):
+                vin_item = {
+                    'scriptsig': inp.get('scriptSig', {}).get('hex', ''),
+                    'witness': inp.get('witness', [])
+                }
+                vin.append(vin_item)
+            
+            return {
+                'txid': tx_data.get('transactionId', ''),
+                'vin': vin,
+                'vout': tx_data.get('vout', [])
+            }
+        except Exception as e:
+            logger.error(f"Error converting CryptoAPIs transaction format: {e}")
+            return {}
+    
     async def get_address_balance(self, address: str) -> BalanceCheck:
         """Get address balance"""
-        api_base = self.get_next_api()
+        api_type, api_base = self.get_next_api()
+        
         try:
-            url = f"{api_base}/address/{address}"
-            result = await self.make_request(url)
-            if result and isinstance(result, dict):
-                funded = result.get('chain_stats', {}).get('funded_txo_sum', 0) / 100000000
-                spent = result.get('chain_stats', {}).get('spent_txo_sum', 0) / 100000000
-                unconfirmed_funded = result.get('mempool_stats', {}).get('funded_txo_sum', 0) / 100000000
-                unconfirmed_spent = result.get('mempool_stats', {}).get('spent_txo_sum', 0) / 100000000
-                
-                confirmed_balance = funded - spent
-                unconfirmed_balance = unconfirmed_funded - unconfirmed_spent
-                total_balance = confirmed_balance + unconfirmed_balance
-                
-                return BalanceCheck(
-                    address=address,
-                    balance=total_balance,
-                    confirmed_balance=confirmed_balance,
-                    unconfirmed_balance=unconfirmed_balance
-                )
+            if api_type == "cryptoapis" and self.cryptoapis_key:
+                url = f"{api_base}/addresses/{address}"
+                headers = {"X-API-Key": self.cryptoapis_key}
+                result = await self.make_request(url, headers)
+                if result and isinstance(result, dict):
+                    data = result.get('data', {}).get('item', {})
+                    confirmed_balance = float(data.get('confirmedBalance', {}).get('amount', 0))
+                    total_balance = float(data.get('totalSpent', {}).get('amount', 0))
+                    
+                    return BalanceCheck(
+                        address=address,
+                        balance=total_balance,
+                        confirmed_balance=confirmed_balance,
+                        unconfirmed_balance=0.0
+                    )
+            else:
+                url = f"{api_base}/address/{address}"
+                result = await self.make_request(url)
+                if result and isinstance(result, dict):
+                    funded = result.get('chain_stats', {}).get('funded_txo_sum', 0) / 100000000
+                    spent = result.get('chain_stats', {}).get('spent_txo_sum', 0) / 100000000
+                    unconfirmed_funded = result.get('mempool_stats', {}).get('funded_txo_sum', 0) / 100000000
+                    unconfirmed_spent = result.get('mempool_stats', {}).get('spent_txo_sum', 0) / 100000000
+                    
+                    confirmed_balance = funded - spent
+                    unconfirmed_balance = unconfirmed_funded - unconfirmed_spent
+                    total_balance = confirmed_balance + unconfirmed_balance
+                    
+                    return BalanceCheck(
+                        address=address,
+                        balance=total_balance,
+                        confirmed_balance=confirmed_balance,
+                        unconfirmed_balance=unconfirmed_balance
+                    )
         except Exception as e:
             logger.error(f"Error getting balance for {address}: {e}")
             
