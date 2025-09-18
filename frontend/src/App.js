@@ -67,6 +67,7 @@ function App() {
 
   // Poll scan progress when scanning
   useEffect(() => {
+    console.log('useEffect triggered - currentScan:', currentScan, 'isScanning:', isScanning);
     let interval;
     if (currentScan && isScanning) {
       interval = setInterval(() => {
