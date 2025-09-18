@@ -226,7 +226,7 @@ class BlockchainAPI:
         
         try:
             if api_type == "cryptoapis" and self.cryptoapis_key:
-                url = f"{api_base}/transactions/{tx_id}"
+                url = f"{api_base}/transactions/utxo/bitcoin/mainnet/{tx_id}"
                 headers = {"X-API-Key": self.cryptoapis_key}
                 result = await self.make_request(url, headers)
                 if result and isinstance(result, dict):
