@@ -53,6 +53,10 @@ class ScanProgress(BaseModel):
     r_reuse_pairs: int
     keys_recovered: int
     progress_percentage: float
+    blocks_per_minute: float = 0.0  # Performance metric
+    estimated_time_remaining: str = "unknown"  # Time estimate
+    api_calls_made: int = 0  # Track API usage
+    errors_encountered: int = 0  # Track errors
     logs: List[Dict[str, Any]]
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
