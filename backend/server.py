@@ -247,7 +247,7 @@ class BlockchainAPI:
             for inp in tx_data.get('vin', []):
                 vin_item = {
                     'scriptsig': inp.get('scriptSig', {}).get('hex', ''),
-                    'witness': inp.get('witness', [])
+                    'witness': inp.get('witnesses', [])  # Fixed: CryptoAPIs uses 'witnesses' not 'witness'
                 }
                 vin.append(vin_item)
             
