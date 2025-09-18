@@ -425,9 +425,6 @@ class RValueScanner:
             logger.error(f"Scan error: {e}")
             scan_states[scan_id]["status"] = "failed"
             await self.add_log(scan_id, f"Scan failed: {str(e)}", "error")
-        finally:
-            # Clean up API session
-            await self.api.close()
     
     async def process_single_block(self, semaphore: asyncio.Semaphore, scan_id: str, block_num: int, address_types: List[str]) -> Dict:
         """Process a single block with concurrency control"""
