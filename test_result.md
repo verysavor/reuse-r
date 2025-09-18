@@ -150,20 +150,53 @@ backend:
           agent: "main" 
           comment: "Dramatically improved performance to 503+ blocks/min by: 1) Increasing rate_limit_semaphore to 100, 2) Adding individual API semaphores (30/30/40), 3) Increasing batch_size to 200, 4) Increasing max_concurrent_blocks to 50, 5) Increasing max_concurrent_transactions to 100, 6) Implementing true parallel API calls with make_parallel_api_request(), 7) Removing artificial sleep delays"
 
-  - task: "Parallel API Integration"
+  - task: "Progress Tracking System"
     implemented: true
-    working: true
+    working: false
     file: "/app/backend/server.py"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
     needs_retesting: false
     status_history:
-        - working: true
-          agent: "main"
-          comment: "CryptoAPIs re-enabled in API rotation alongside Blockstream and Mempool.space for high-throughput scanning"
-        - working: true
-          agent: "main"
-          comment: "Upgraded from API rotation to true parallel processing - all 3 APIs are now called simultaneously with first successful result returned, maximizing throughput"
+        - working: false
+          agent: "testing"
+          comment: "❌ CRITICAL ISSUE CONFIRMED: Progress tracking completely broken. Scans remain stuck at 0% completion and 0 blocks scanned even after 30+ seconds of running. Tested with small range (252474-252476) and monitored every 2 seconds for 30 seconds - progress never moved from 0%. This matches the exact issue reported in the review request."
+
+  - task: "API Request Reliability and Timeout Handling"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: false
+          agent: "testing"
+          comment: "❌ CRITICAL ISSUE CONFIRMED: High API failure rate (~30%) with frequent timeouts. Testing 10 rapid requests showed 3 timeouts (30% failure rate). Backend logs show 'All APIs timed out' errors. The make_parallel_api_request function appears to have issues with timeout handling and API rotation fallback mechanisms."
+
+  - task: "Large Block Range Processing"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: false
+          agent: "testing"
+          comment: "❌ CRITICAL ISSUE CONFIRMED: Large block ranges (252474-253000) show no progress despite scan appearing to run. Monitored for 30 seconds and scan remained at 0% progress and 0 blocks scanned. This matches the exact issue reported where large ranges show no results."
+
+  - task: "Async Coroutine Handling"
+    implemented: true
+    working: false
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: false
+          agent: "testing"
+          comment: "❌ CRITICAL ISSUE CONFIRMED: Coroutine handling bugs causing 'coroutine' object has no attribute 'done' errors. Backend logs show multiple instances of this error during transaction processing. The async/await implementation in the parallel processing system has fundamental issues that prevent proper execution."
 
   - task: "R-value Detection Core Logic"
     implemented: true
