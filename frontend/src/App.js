@@ -130,6 +130,9 @@ function App() {
     try {
       const response = await axios.get(`${API}/scan/progress/${currentScan}`);
       const progress = response.data;
+      
+      console.log('Progress update received:', progress);
+      
       setScanProgress(progress);
       
       // Update logs
