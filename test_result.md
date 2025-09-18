@@ -168,6 +168,18 @@ backend:
         -agent: "testing"
         -comment: "TESTED: All backend API endpoints working correctly. Health check (/api/health) returns healthy status. Current height (/api/current-height) returns correct blockchain height (915191). Scan start, progress tracking, results, and export endpoints all functional. Error handling works for invalid requests. Balance checking operational."
 
+  - task: "Scan Progress System Testing"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        -working: true
+        -agent: "testing"
+        -comment: "COMPREHENSIVE SCAN PROGRESS TESTING COMPLETED: ✅ All 13/13 tests passed. Tested single block scan (252474) and multi-block scan (252474-252476) as requested. Key verification results: (1) Progress Updates - Real-time progress tracking working correctly with proper status, current_block, blocks_scanned, total_blocks, progress_percentage fields, (2) Real-time Progress Tracking - /api/scan/progress/{scan_id} endpoint returns live updates during scan execution, (3) Log Updates - Logs populated with meaningful scan progress information including transaction processing and signature extraction, (4) Status Transitions - Proper transitions from 'running' to 'completed' status verified, (5) Progress Accuracy - Backend correctly calculates progress: single block shows 1 total/1 scanned, multi-block shows 3 total/3 scanned. CRITICAL FINDING: Backend progress calculations are ACCURATE. The reported frontend issue (showing 50 blocks when should be 1) is confirmed to be a FRONTEND DISPLAY ISSUE, not a backend problem. Backend correctly reports 1 total block and 1 block scanned for single block scans. All scan progress system components working perfectly."
+
 frontend:
   - task: "API Integration Display"
     implemented: true
