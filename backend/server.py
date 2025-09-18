@@ -277,67 +277,19 @@ class BlockchainAPI:
         return {}
 
     async def get_block_hash(self, height: int) -> str:
-        """Get block hash by height"""
-        api_type, api_base = self.get_next_api()
-        
-        try:
-            if api_type == "cryptoapis" and self.cryptoapis_key:
-                url = f"{api_base}/blocks/utxo/bitcoin/mainnet/height/{height}/details"
-                headers = {"X-API-Key": self.cryptoapis_key}
-                result = await self.make_request(url, headers)
-                if result and isinstance(result, dict):
-                    return result.get('data', {}).get('item', {}).get('hash', '')
-            else:
-                url = f"{api_base}/block-height/{height}"
-                result = await self.make_request(url)
-                if result:
-                    return str(result)
-        except Exception as e:
-            logger.error(f"Error getting block hash for height {height} from {api_type}: {e}")
-        return ""
+        """Get block hash by height using parallel API calls"""
+        result = await self.make_parallel_api_request(self._get_block_hash_from_api, height)
+        return result if result else ""
     
     async def get_block_transactions(self, block_hash: str) -> List[str]:
-        """Get transaction IDs in a block"""
-        api_type, api_base = self.get_next_api()
-        
-        try:
-            if api_type == "cryptoapis" and self.cryptoapis_key:
-                url = f"{api_base}/blocks/utxo/bitcoin/mainnet/hash/{block_hash}/transactions"
-                headers = {"X-API-Key": self.cryptoapis_key}
-                result = await self.make_request(url, headers)
-                if result and isinstance(result, dict):
-                    transactions = result.get('data', {}).get('items', [])
-                    return [tx.get('transactionId', '') for tx in transactions if tx.get('transactionId')]
-            else:
-                url = f"{api_base}/block/{block_hash}/txids"
-                result = await self.make_request(url)
-                if result and isinstance(result, list):
-                    return result
-        except Exception as e:
-            logger.error(f"Error getting block transactions from {api_type}: {e}")
-        return []
+        """Get transaction IDs in a block using parallel API calls"""
+        result = await self.make_parallel_api_request(self._get_block_transactions_from_api, block_hash)
+        return result if result else []
     
     async def get_transaction(self, tx_id: str) -> Dict:
-        """Get transaction details"""
-        api_type, api_base = self.get_next_api()
-        
-        try:
-            if api_type == "cryptoapis" and self.cryptoapis_key:
-                url = f"{api_base}/transactions/utxo/bitcoin/mainnet/{tx_id}"
-                headers = {"X-API-Key": self.cryptoapis_key}
-                result = await self.make_request(url, headers)
-                if result and isinstance(result, dict):
-                    tx_data = result.get('data', {}).get('item', {})
-                    # Convert CryptoAPIs format to standard format
-                    return self.convert_cryptoapis_transaction(tx_data)
-            else:
-                url = f"{api_base}/tx/{tx_id}"
-                result = await self.make_request(url)
-                if result and isinstance(result, dict):
-                    return result
-        except Exception as e:
-            logger.error(f"Error getting transaction {tx_id} from {api_type}: {e}")
-        return {}
+        """Get transaction details using parallel API calls"""
+        result = await self.make_parallel_api_request(self._get_transaction_from_api, tx_id)
+        return result if result else {}
     
     def convert_cryptoapis_transaction(self, tx_data: Dict) -> Dict:
         """Convert CryptoAPIs transaction format to standard format"""
