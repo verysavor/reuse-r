@@ -89,11 +89,16 @@ function App() {
 
   const startScan = async () => {
     try {
-      const response = await axios.post(`${API}/scan/start`, {
+      const scanData = {
         start_block: parseInt(scanConfig.startBlock),
         end_block: parseInt(scanConfig.endBlock),
         address_types: scanConfig.addressTypes
-      });
+      };
+      
+      console.log('Starting scan with config:', scanData);
+      console.log('Current scanConfig state:', scanConfig);
+      
+      const response = await axios.post(`${API}/scan/start`, scanData);
       
       setCurrentScan(response.data.scan_id);
       setIsScanning(true);
