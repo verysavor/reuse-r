@@ -631,7 +631,7 @@ class RValueScanner:
                             "r": r,
                             "s": s,
                             "type": "segwit",
-                            "message_hash": tx_id[:64]  # Use first 32 bytes of txid as message hash
+                            "message_hash": f"{tx_id}_{input_index}"  # Make message hash unique per input
                         }
                 except:
                     pass
