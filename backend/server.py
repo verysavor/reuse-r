@@ -148,15 +148,27 @@ class BlockchainAPI:
                                     except:
                                         return text
                             elif resp.status == 429:  # Rate limited
-                                await asyncio.sleep(2 ** attempt)
+                                wait_time = min(2 ** attempt, 8)  # Cap at 8 seconds
+                                logger.debug(f"Rate limited, waiting {wait_time}s before retry")
+                                await asyncio.sleep(wait_time)
                                 continue
+                            elif resp.status in [402, 403]:  # Payment/access issues (CryptoAPIs)
+                                logger.debug(f"API access issue {resp.status} for {url}")
+                                return None  # Don't retry these
                             else:
                                 logger.warning(f"API error {resp.status} for {url}")
+                                if attempt < retries - 1:
+                                    await asyncio.sleep(1)
+                                continue
                                 
-                except Exception as e:
-                    logger.warning(f"Request failed (attempt {attempt + 1}) for {url}: {e}")
+                except asyncio.TimeoutError:
+                    logger.debug(f"Request timeout for {url} (attempt {attempt + 1})")
                     if attempt < retries - 1:
-                        await asyncio.sleep(1)
+                        await asyncio.sleep(2 ** attempt)
+                except Exception as e:
+                    logger.debug(f"Request failed (attempt {attempt + 1}) for {url}: {e}")
+                    if attempt < retries - 1:
+                        await asyncio.sleep(2 ** attempt)
                     
             return None
 
