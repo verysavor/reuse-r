@@ -463,9 +463,9 @@ class RValueScanner:
         self.api = BlockchainAPI()
         self.crypto = BitcoinCrypto()
         self.signature_cache = {}  # Cache for R values
-        self.batch_size = 200  # Much larger batches for efficiency  
-        self.max_concurrent_blocks = 50  # Much higher concurrency
-        self.max_concurrent_transactions = 100  # High transaction concurrency
+        self.batch_size = 100  # Reduced for more manageable batches
+        self.max_concurrent_blocks = 25  # Reduced for better reliability
+        self.max_concurrent_transactions = 50  # Reduced to avoid overwhelming APIs
     
     async def scan_blocks(self, scan_id: str, start_block: int, end_block: int, address_types: List[str]):
         """Main scanning function with parallel processing"""
