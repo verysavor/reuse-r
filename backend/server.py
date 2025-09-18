@@ -104,15 +104,9 @@ class BlockchainAPI:
         self.rate_limit_semaphore = asyncio.Semaphore(15)  # Reduced to avoid overwhelming APIs
         
     def get_next_api(self):
-        """Use Blockchain.info API to avoid rate limits"""
-        apis = [
-            ("blockchain_info", self.blockchain_info_base),
-            ("blockstream", self.blockstream_base),
-        ]
-        
-        api_type, api_base = apis[self.current_api % len(apis)]
-        self.current_api += 1
-        return api_type, api_base
+        """Use Blockchain.info API exclusively since it's working"""
+        # Force use of blockchain.info API only since it's working correctly
+        return ("blockchain_info", self.blockchain_info_base)
         
     async def make_request(self, url: str, headers: dict = None, retries: int = 3) -> dict:
         """Make HTTP request with rate limiting and retries"""
