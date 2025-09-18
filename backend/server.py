@@ -301,19 +301,49 @@ class BlockchainAPI:
         return {}
 
     async def get_block_hash(self, height: int) -> str:
-        """Get block hash by height using parallel API calls"""
+        """Get block hash by height using parallel API calls with fallback"""
+        # Try parallel first
         result = await self.make_parallel_api_request(self._get_block_hash_from_api, height)
-        return result if result else ""
+        if result:
+            return result
+            
+        # Fallback to rotation method if parallel fails
+        api_type, api_base = self.get_next_api()
+        try:
+            fallback_result = await self._get_block_hash_from_api(api_type, api_base, height)
+            return fallback_result if fallback_result else ""
+        except:
+            return ""
     
     async def get_block_transactions(self, block_hash: str) -> List[str]:
-        """Get transaction IDs in a block using parallel API calls"""
+        """Get transaction IDs in a block using parallel API calls with fallback"""
+        # Try parallel first
         result = await self.make_parallel_api_request(self._get_block_transactions_from_api, block_hash)
-        return result if result else []
+        if result:
+            return result
+            
+        # Fallback to rotation method if parallel fails
+        api_type, api_base = self.get_next_api()
+        try:
+            fallback_result = await self._get_block_transactions_from_api(api_type, api_base, block_hash)
+            return fallback_result if fallback_result else []
+        except:
+            return []
     
     async def get_transaction(self, tx_id: str) -> Dict:
-        """Get transaction details using parallel API calls"""
+        """Get transaction details using parallel API calls with fallback"""
+        # Try parallel first
         result = await self.make_parallel_api_request(self._get_transaction_from_api, tx_id)
-        return result if result else {}
+        if result:
+            return result
+            
+        # Fallback to rotation method if parallel fails
+        api_type, api_base = self.get_next_api()
+        try:
+            fallback_result = await self._get_transaction_from_api(api_type, api_base, tx_id)
+            return fallback_result if fallback_result else {}
+        except:
+            return {}
     
     def convert_cryptoapis_transaction(self, tx_data: Dict) -> Dict:
         """Convert CryptoAPIs transaction format to standard format"""
