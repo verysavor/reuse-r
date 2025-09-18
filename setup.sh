@@ -215,23 +215,41 @@ EOF
 fi
 
 # Frontend environment
-if [ -f "frontend/.env" ]; then
-    print_status "Frontend .env file found"
+FRONTEND_ENV_PATH="frontend/.env"
+if [ -f "$FRONTEND_ENV_PATH" ]; then
+    print_status "Frontend .env file found at $FRONTEND_ENV_PATH"
     
     # Check if REACT_APP_BACKEND_URL points to localhost
-    if grep -q "REACT_APP_BACKEND_URL.*localhost" frontend/.env; then
+    if grep -q "REACT_APP_BACKEND_URL.*localhost" "$FRONTEND_ENV_PATH"; then
         print_status "✅ Frontend configured for local backend"
     else
         print_error "❌ Frontend .env points to remote backend!"
         print_error "This is the bug you mentioned. Fixing now..."
         
         # Fix the configuration
-        sed -i '' 's|REACT_APP_BACKEND_URL=.*|REACT_APP_BACKEND_URL=http://localhost:8001|' frontend/.env
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            sed -i '' 's|REACT_APP_BACKEND_URL=.*|REACT_APP_BACKEND_URL=http://localhost:8001|' "$FRONTEND_ENV_PATH"
+        else
+            sed -i 's|REACT_APP_BACKEND_URL=.*|REACT_APP_BACKEND_URL=http://localhost:8001|' "$FRONTEND_ENV_PATH"
+        fi
         print_status "✅ Fixed: Frontend now points to local backend"
     fi
 else
-    print_error "Frontend .env file not found"
-    exit 1
+    print_error "Frontend .env file not found at $FRONTEND_ENV_PATH"
+    print_status "Creating frontend .env file..."
+    
+    # Create the missing .env file
+    cat > "$FRONTEND_ENV_PATH" << 'EOF'
+REACT_APP_BACKEND_URL=http://localhost:8001
+WDS_SOCKET_PORT=443
+EOF
+    
+    if [ -f "$FRONTEND_ENV_PATH" ]; then
+        print_status "✅ Created frontend .env file"
+    else
+        print_error "Failed to create frontend .env file"
+        exit 1
+    fi
 fi
 
 print_header "\n🧪 Starting Test Services..."
