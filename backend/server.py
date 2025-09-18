@@ -180,10 +180,17 @@ class BlockchainAPI:
         api_type, api_base = self.get_next_api()
         
         try:
-            url = f"{api_base}/block-height/{height}"
-            result = await self.make_request(url)
-            if result:
-                return str(result)
+            if api_type == "cryptoapis" and self.cryptoapis_key:
+                url = f"{api_base}/blocks/{height}"
+                headers = {"X-API-Key": self.cryptoapis_key}
+                result = await self.make_request(url, headers)
+                if result and isinstance(result, dict):
+                    return result.get('data', {}).get('item', {}).get('hash', '')
+            else:
+                url = f"{api_base}/block-height/{height}"
+                result = await self.make_request(url)
+                if result:
+                    return str(result)
         except Exception as e:
             logger.error(f"Error getting block hash for height {height} from {api_type}: {e}")
         return ""
@@ -193,10 +200,18 @@ class BlockchainAPI:
         api_type, api_base = self.get_next_api()
         
         try:
-            url = f"{api_base}/block/{block_hash}/txids"
-            result = await self.make_request(url)
-            if result and isinstance(result, list):
-                return result
+            if api_type == "cryptoapis" and self.cryptoapis_key:
+                url = f"{api_base}/blocks/{block_hash}/transactions"
+                headers = {"X-API-Key": self.cryptoapis_key}
+                result = await self.make_request(url, headers)
+                if result and isinstance(result, dict):
+                    transactions = result.get('data', {}).get('items', [])
+                    return [tx.get('transactionId', '') for tx in transactions if tx.get('transactionId')]
+            else:
+                url = f"{api_base}/block/{block_hash}/txids"
+                result = await self.make_request(url)
+                if result and isinstance(result, list):
+                    return result
         except Exception as e:
             logger.error(f"Error getting block transactions from {api_type}: {e}")
         return []
@@ -206,10 +221,19 @@ class BlockchainAPI:
         api_type, api_base = self.get_next_api()
         
         try:
-            url = f"{api_base}/tx/{tx_id}"
-            result = await self.make_request(url)
-            if result and isinstance(result, dict):
-                return result
+            if api_type == "cryptoapis" and self.cryptoapis_key:
+                url = f"{api_base}/transactions/{tx_id}"
+                headers = {"X-API-Key": self.cryptoapis_key}
+                result = await self.make_request(url, headers)
+                if result and isinstance(result, dict):
+                    tx_data = result.get('data', {}).get('item', {})
+                    # Convert CryptoAPIs format to standard format
+                    return self.convert_cryptoapis_transaction(tx_data)
+            else:
+                url = f"{api_base}/tx/{tx_id}"
+                result = await self.make_request(url)
+                if result and isinstance(result, dict):
+                    return result
         except Exception as e:
             logger.error(f"Error getting transaction {tx_id} from {api_type}: {e}")
         return {}
