@@ -549,14 +549,14 @@ class RValueScanner:
                         if isinstance(block_result, dict) and 'signatures' in block_result:
                             block_signatures = block_result['signatures']
                             
-                            # Update progress instantly after each block completes
-                            blocks_processed = scan_states[scan_id]["blocks_scanned"] + 1
-                            scan_states[scan_id]["blocks_scanned"] = blocks_processed
+                            # Update progress instantly after each block completes (thread-safe)
+                            current_blocks_scanned = scan_states[scan_id]["blocks_scanned"] + 1
+                            scan_states[scan_id]["blocks_scanned"] = current_blocks_scanned
                             scan_states[scan_id]["current_block"] = block_num
-                            scan_states[scan_id]["progress_percentage"] = (blocks_processed / total_blocks) * 100
+                            scan_states[scan_id]["progress_percentage"] = (current_blocks_scanned / total_blocks) * 100
                             scan_states[scan_id]["signatures_found"] += len(block_signatures)
                             
-                            await self.add_log(scan_id, f"Block {block_num} complete: {len(block_signatures)} signatures found ({blocks_processed}/{total_blocks} blocks)")
+                            await self.add_log(scan_id, f"Block {block_num} complete: {len(block_signatures)} signatures found ({current_blocks_scanned}/{total_blocks} blocks)")
                             
                             return block_signatures
                         else:
