@@ -189,7 +189,6 @@ metadata:
 
 test_plan:
   current_focus:
-    - "CryptoAPIs Authentication Fix"
     - "Backend API Endpoints Testing"
   stuck_tasks:
     []
