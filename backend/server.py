@@ -539,6 +539,9 @@ class RValueScanner:
     async def scan_blocks(self, scan_id: str, start_block: int, end_block: int, address_types: List[str]):
         """Main scanning function with simplified sequential block processing"""
         try:
+            # Set status to running
+            scan_states[scan_id]["status"] = "running"
+            
             total_blocks = end_block - start_block + 1
             signatures_by_r = {}  # Store signatures grouped by R value
             
