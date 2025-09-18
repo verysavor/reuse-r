@@ -225,7 +225,7 @@ class BlockchainAPI:
                 result = await self.make_request(url, headers)
                 if result and isinstance(result, dict):
                     transactions = result.get('data', {}).get('items', [])
-                    return [tx.get('transactionId', '') for tx in transactions if tx.get('transactionId')]
+                    return [tx.get('id', tx.get('hash', '')) for tx in transactions if tx.get('id') or tx.get('hash')]
             else:
                 url = f"{api_base}/block/{block_hash}/txids"
                 result = await self.make_request(url)
