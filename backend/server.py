@@ -859,7 +859,7 @@ async def test_cryptoapis():
     
     # Test 1: Get latest block info with detailed error handling
     try:
-        url = f"{api.cryptoapis_base}/blockchain-data/bitcoin/mainnet/blocks/height/915000/details"
+        url = f"{api.cryptoapis_base}/blocks/utxo/bitcoin/mainnet/height/915000/details"
         headers = {
             "x-api-key": api.cryptoapis_key,
             "Content-Type": "application/json"
