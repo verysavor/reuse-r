@@ -103,15 +103,16 @@ class BlockchainAPI:
         self.rate_limit_semaphore = asyncio.Semaphore(15)  # Reduced to avoid overwhelming APIs
         
     def get_next_api(self):
-        """Use all available APIs including CryptoAPIs with correct authentication"""
+        """Use reliable APIs - CryptoAPIs temporarily disabled due to endpoint issues"""
         apis = [
             ("blockstream", self.blockstream_base),
             ("mempool", self.mempool_base),
         ]
         
-        # Add CryptoAPIs if we have the key
-        if self.cryptoapis_key:
-            apis.append(("cryptoapis", self.cryptoapis_base))
+        # CryptoAPIs temporarily disabled - endpoints returning "uri_not_found" 
+        # TODO: Re-enable once correct endpoint structure is confirmed
+        # if self.cryptoapis_key:
+        #     apis.append(("cryptoapis", self.cryptoapis_base))
         
         api_type, api_base = apis[self.current_api % len(apis)]
         self.current_api += 1
