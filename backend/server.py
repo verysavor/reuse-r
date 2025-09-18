@@ -186,7 +186,7 @@ class BlockchainAPI:
         try:
             if api_type == "cryptoapis" and self.cryptoapis_key:
                 url = f"{api_base}/blocks/{height}"
-                headers = {"Authorization": f"ApiKey {self.cryptoapis_key}"}
+                headers = {"X-API-Key": self.cryptoapis_key}
                 result = await self.make_request(url, headers)
                 if result and isinstance(result, dict):
                     return result.get('data', {}).get('item', {}).get('hash', '')
