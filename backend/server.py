@@ -816,8 +816,8 @@ async def get_current_height():
 async def start_scan(config: ScanConfig, background_tasks: BackgroundTasks):
     """Start a new reused R value scan"""
     try:
-        if config.end_block <= config.start_block:
-            raise HTTPException(status_code=400, detail="End block must be greater than start block")
+        if config.end_block < config.start_block:
+            raise HTTPException(status_code=400, detail="End block must be greater than or equal to start block")
         
         if not config.address_types:
             raise HTTPException(status_code=400, detail="At least one address type must be selected")
