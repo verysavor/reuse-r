@@ -399,7 +399,7 @@ function App() {
                       className="w-full"
                     />
                     
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                       <div className="text-center">
                         <div className="text-2xl font-bold text-blue-400">
                           {scanProgress.blocks_scanned}
@@ -424,6 +424,24 @@ function App() {
                         </div>
                         <div className="text-slate-400">Keys Recovered</div>
                       </div>
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-purple-400">
+                          {scanProgress.blocks_per_minute?.toFixed(1) || '0.0'}
+                        </div>
+                        <div className="text-slate-400">Blocks/Min</div>
+                      </div>
+                    </div>
+                    
+                    {scanProgress.estimated_time_remaining && scanProgress.estimated_time_remaining !== 'unknown' && (
+                      <div className="text-center text-slate-300">
+                        <span className="text-sm">Estimated time remaining: </span>
+                        <span className="font-semibold text-cyan-400">{scanProgress.estimated_time_remaining}</span>
+                      </div>
+                    )}
+                    
+                    <div className="grid grid-cols-2 gap-4 text-xs text-slate-500">
+                      <div>API Calls: {scanProgress.api_calls_made || 0}</div>
+                      <div>Errors: {scanProgress.errors_encountered || 0}</div>
                     </div>
                   </div>
                 )}
