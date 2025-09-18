@@ -610,6 +610,7 @@ class RValueScanner:
                 
                 # Get transactions in block
                 tx_ids = await self.api.get_block_transactions(block_hash)
+                await self.add_log(scan_id, f"DEBUG: get_block_transactions returned {len(tx_ids) if tx_ids else 0} transactions", "info")
                 if not tx_ids:
                     await self.add_log(scan_id, f"No transactions found in block {block_num}", "warning")
                     return {'block': block_num, 'signatures': []}
