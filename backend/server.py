@@ -103,11 +103,10 @@ class BlockchainAPI:
         self.rate_limit_semaphore = asyncio.Semaphore(15)  # Reduced to avoid overwhelming APIs
         
     def get_next_api(self):
-        """Rotate between APIs with CryptoAPIs for high throughput"""
+        """Use reliable APIs only - CryptoAPIs needs further auth debugging"""
         apis = [
             ("blockstream", self.blockstream_base),
             ("mempool", self.mempool_base),
-            ("cryptoapis", self.cryptoapis_base),  # Re-enabled with correct auth
         ]
         api_type, api_base = apis[self.current_api % len(apis)]
         self.current_api += 1
