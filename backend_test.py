@@ -11,6 +11,8 @@ class BitcoinScannerAPITester:
         self.tests_run = 0
         self.tests_passed = 0
         self.scan_id = None
+        self.cryptoapis_working = False
+        self.api_rotation_verified = False
 
     def run_test(self, name, method, endpoint, expected_status, data=None, timeout=30):
         """Run a single API test"""
