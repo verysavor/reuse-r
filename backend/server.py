@@ -142,18 +142,12 @@ class BlockchainAPI:
     
     async def get_block_height(self) -> int:
         """Get current block height with fallback endpoints"""
-        for endpoint in self.api_endpoints[:2]:  # Try first 2 endpoints
+        for endpoint in self.api_endpoints:  # Try both working endpoints
             try:
-                if "blockcypher" in endpoint:
-                    url = f"{endpoint}"
-                    result = await self.make_request(url)
-                    if result and isinstance(result, dict):
-                        return result.get('height', 0)
-                else:
-                    url = f"{endpoint}/blocks/tip/height"
-                    result = await self.make_request(url)
-                    if result:
-                        return int(result) if isinstance(result, str) else result
+                url = f"{endpoint}/blocks/tip/height"
+                result = await self.make_request(url)
+                if result:
+                    return int(result) if isinstance(result, str) else result
             except Exception as e:
                 logger.error(f"Error getting block height from {endpoint}: {e}")
                 continue
