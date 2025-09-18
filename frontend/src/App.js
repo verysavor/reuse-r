@@ -274,7 +274,7 @@ function App() {
         </div>
 
         <Tabs defaultValue="scanner" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 bg-slate-800/50">
+          <TabsList className="grid w-full grid-cols-4 bg-slate-800/50">
             <TabsTrigger value="scanner" className="data-[state=active]:bg-slate-700">
               <Search className="h-4 w-4 mr-2" />
               Scanner
@@ -286,6 +286,10 @@ function App() {
             <TabsTrigger value="logs" className="data-[state=active]:bg-slate-700">
               <Activity className="h-4 w-4 mr-2" />
               Logs
+            </TabsTrigger>
+            <TabsTrigger value="performance" className="data-[state=active]:bg-slate-700">
+              <TrendingUp className="h-4 w-4 mr-2" />
+              Performance
             </TabsTrigger>
           </TabsList>
 
