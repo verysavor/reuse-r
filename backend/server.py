@@ -221,7 +221,7 @@ class BlockchainAPI:
             logger.error(f"Error in parallel API request: {e}")
             # Cancel all tasks on error
             for task in tasks:
-                if not task.done():
+                if isinstance(task, asyncio.Task) and not task.done():
                     task.cancel()
                     try:
                         await task
