@@ -196,7 +196,7 @@ class BitcoinScannerAPITester:
         return False
 
     def test_scan_progress(self):
-        """Test getting scan progress"""
+        """Test getting scan progress and analyze for CryptoAPIs usage"""
         if not self.scan_id:
             print("❌ No scan ID available for progress test")
             return False
@@ -214,6 +214,18 @@ class BitcoinScannerAPITester:
             if has_all_fields:
                 print(f"   Status: {response['status']}")
                 print(f"   Progress: {response['progress_percentage']:.1f}%")
+                print(f"   Current Block: {response['current_block']}")
+                print(f"   Blocks Scanned: {response.get('blocks_scanned', 0)}")
+                print(f"   API Calls Made: {response.get('api_calls_made', 0)}")
+                print(f"   Errors Encountered: {response.get('errors_encountered', 0)}")
+                
+                # Analyze logs for API usage patterns
+                logs = response.get('logs', [])
+                if logs:
+                    print(f"   Recent logs ({len(logs)} entries):")
+                    for log in logs[-5:]:  # Show last 5 logs
+                        print(f"     {log.get('level', 'info').upper()}: {log.get('message', '')}")
+                
                 return True
         return False
 
