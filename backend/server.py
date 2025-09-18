@@ -154,7 +154,7 @@ class BlockchainAPI:
         # Try CryptoAPIs first (highest limits)
         if self.cryptoapis_key:
             try:
-                url = f"{self.cryptoapis_base}/info"
+                url = f"{self.cryptoapis_base}/blocks/last"
                 headers = {
                     "x-api-key": self.cryptoapis_key,
                     "Content-Type": "application/json"
