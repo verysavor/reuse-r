@@ -7,8 +7,8 @@ The Bitcoin Reused-R Scanner now includes advanced parallel processing capabilit
 ### **Performance Features**
 
 #### **1. Multi-API Load Balancing**
-- **3 Blockchain APIs**: Blockstream, Mempool.space, BlockCypher
-- **Round-robin distribution**: Requests automatically distributed across APIs
+- **3 High-Performance APIs**: Blockstream, Mempool.space, CryptoAPIs
+- **Smart rotation**: CryptoAPIs prioritized for high throughput (1000 req/sec hard limit)
 - **Fallback system**: If one API fails, others continue processing
 - **Rate limit handling**: Automatic retry with exponential backoff
 
