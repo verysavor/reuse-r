@@ -927,42 +927,50 @@ async def health_check():
 
 @api_router.get("/test-block-252474")
 async def test_block_252474():
-    """Test blockchain API specifically for block 252474"""
-    api = BlockchainAPI()
+    """Test blockchain API specifically for block 252474"""    
+    block_hash = "000000000000004c9303d897ab63bac9978a3058f2b253acf50062056e4c5830"
     
     test_results = {
         "tests": {}
     }
     
-    # Test getting block hash for 252474
+    # Test direct blockchain.info API call
     try:
-        block_hash = await api.get_block_hash(252474)
-        test_results["tests"]["get_block_hash"] = {
-            "success": bool(block_hash),
-            "block_hash": block_hash
-        }
+        url = f"https://blockchain.info/rawblock/{block_hash}"
         
-        # If we got the hash, test getting transactions
-        if block_hash:
-            tx_ids = await api.get_block_transactions(block_hash)
-            test_results["tests"]["get_block_transactions"] = {
-                "success": bool(tx_ids),
-                "transaction_count": len(tx_ids) if tx_ids else 0,
-                "first_few_txs": tx_ids[:5] if tx_ids else []
-            }
-            
-            # Test getting a specific transaction if we have any
-            if tx_ids:
-                first_tx = tx_ids[0]
-                tx_data = await api.get_transaction(first_tx)
-                test_results["tests"]["get_transaction"] = {
-                    "success": bool(tx_data),
-                    "tx_id": first_tx,
-                    "has_vin": "vin" in tx_data,
-                    "vin_count": len(tx_data.get("vin", [])),
-                    "has_vout": "vout" in tx_data,
-                    "vout_count": len(tx_data.get("vout", []))
+        timeout = aiohttp.ClientTimeout(total=30)
+        async with aiohttp.ClientSession(timeout=timeout) as session:
+            async with session.get(url) as resp:
+                test_results["tests"]["direct_api_call"] = {
+                    "url": url,
+                    "status": resp.status,
+                    "content_type": resp.headers.get('content-type', ''),
                 }
+                
+                if resp.status == 200:
+                    if 'application/json' in resp.headers.get('content-type', ''):
+                        result = await resp.json()
+                        tx_count = len(result.get('tx', [])) if result else 0
+                        test_results["tests"]["direct_api_call"]["tx_count"] = tx_count
+                        test_results["tests"]["direct_api_call"]["has_tx_field"] = 'tx' in result if result else False
+                        test_results["tests"]["direct_api_call"]["result_type"] = type(result).__name__
+                        if tx_count > 0:
+                            test_results["tests"]["direct_api_call"]["first_tx_hash"] = result['tx'][0].get('hash', 'NO_HASH')
+                    else:
+                        response_text = await resp.text()
+                        test_results["tests"]["direct_api_call"]["response_text"] = response_text[:200] + "..." if len(response_text) > 200 else response_text
+                else:
+                    error_text = await resp.text()
+                    test_results["tests"]["direct_api_call"]["error_text"] = error_text
+        
+        # Test through our API method
+        api = BlockchainAPI()
+        tx_ids = await api.get_block_transactions(block_hash)
+        test_results["tests"]["our_method"] = {
+            "success": bool(tx_ids),
+            "transaction_count": len(tx_ids) if tx_ids else 0,
+            "first_few_txs": tx_ids[:3] if tx_ids else []
+        }
         
     except Exception as e:
         test_results["tests"]["error"] = {
