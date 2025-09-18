@@ -97,9 +97,8 @@ class BlockchainAPI:
     def __init__(self):
         self.api_endpoints = [
             "https://blockstream.info/api",
-            "https://mempool.space/api",
-            "https://api.blockcypher.com/v1/btc/main",
-            # Add more endpoints as needed
+            "https://mempool.space/api"
+            # Removed BlockCypher due to different API structure causing 404s
         ]
         self.current_endpoint = 0
         self.rate_limit_semaphore = asyncio.Semaphore(20)  # Allow 20 concurrent requests
