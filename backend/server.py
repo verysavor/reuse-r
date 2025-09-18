@@ -365,71 +365,135 @@ class RValueScanner:
         self.api = BlockchainAPI()
         self.crypto = BitcoinCrypto()
         self.signature_cache = {}  # Cache for R values
+        self.batch_size = 50  # Process blocks in batches
+        self.max_concurrent_blocks = 10  # Parallel block processing limit
     
     async def scan_blocks(self, scan_id: str, start_block: int, end_block: int, address_types: List[str]):
-        """Main scanning function"""
+        """Main scanning function with parallel processing"""
         try:
             scan_states[scan_id]["status"] = "running"
             scan_states[scan_id]["current_block"] = start_block
             scan_states[scan_id]["total_blocks"] = end_block - start_block + 1
             
             signatures_by_r = {}  # Group signatures by R value
+            total_blocks = end_block - start_block + 1
             
-            for block_num in range(start_block, end_block + 1):
+            # Process blocks in parallel batches
+            for batch_start in range(start_block, end_block + 1, self.batch_size):
                 if scan_states[scan_id]["status"] == "stopped":
                     break
                 
-                await self.add_log(scan_id, f"Scanning block {block_num}...")
+                batch_end = min(batch_start + self.batch_size - 1, end_block)
+                await self.add_log(scan_id, f"Processing batch: blocks {batch_start} to {batch_end}")
                 
-                # Get block hash
-                block_hash = await self.api.get_block_hash(block_num)
-                if not block_hash:
-                    await self.add_log(scan_id, f"Failed to get block hash for {block_num}", "warning")
-                    continue
+                # Create semaphore for this batch
+                semaphore = asyncio.Semaphore(self.max_concurrent_blocks)
                 
-                # Get transactions in block
-                tx_ids = await self.api.get_block_transactions(block_hash)
-                
-                for tx_id in tx_ids:
+                # Create tasks for parallel block processing
+                tasks = []
+                for block_num in range(batch_start, batch_end + 1):
                     if scan_states[scan_id]["status"] == "stopped":
                         break
-                    
-                    # Get transaction details
-                    tx_data = await self.api.get_transaction(tx_id)
-                    if not tx_data:
-                        continue
-                    
-                    # Extract signatures from transaction
-                    signatures = await self.extract_signatures(tx_data, address_types)
-                    
-                    # Group signatures by R value
-                    for sig in signatures:
-                        r_value = sig["r"]
-                        if r_value not in signatures_by_r:
-                            signatures_by_r[r_value] = []
-                        signatures_by_r[r_value].append(sig)
-                    
-                    scan_states[scan_id]["signatures_found"] += len(signatures)
+                    task = self.process_single_block(semaphore, scan_id, block_num, address_types)
+                    tasks.append(task)
                 
-                scan_states[scan_id]["current_block"] = block_num
-                scan_states[scan_id]["blocks_scanned"] += 1
-                scan_states[scan_id]["progress_percentage"] = (
-                    (block_num - start_block + 1) / (end_block - start_block + 1) * 100
-                )
+                # Execute batch in parallel
+                batch_results = await asyncio.gather(*tasks, return_exceptions=True)
                 
-                # Add delay to avoid API rate limiting
-                await asyncio.sleep(0.1)
+                # Collect signatures from batch results
+                for result in batch_results:
+                    if isinstance(result, dict) and 'signatures' in result:
+                        block_signatures = result['signatures']
+                        for sig in block_signatures:
+                            r_value = sig["r"]
+                            if r_value not in signatures_by_r:
+                                signatures_by_r[r_value] = []
+                            signatures_by_r[r_value].append(sig)
+                        
+                        scan_states[scan_id]["signatures_found"] += len(block_signatures)
+                
+                # Update progress
+                blocks_processed = min(batch_end - start_block + 1, total_blocks)
+                scan_states[scan_id]["blocks_scanned"] = blocks_processed
+                scan_states[scan_id]["current_block"] = batch_end
+                scan_states[scan_id]["progress_percentage"] = (blocks_processed / total_blocks) * 100
+                
+                await self.add_log(scan_id, f"Batch complete: {len([r for r in signatures_by_r.values() if len(r) > 1])} reused R values found so far")
+                
+                # Small delay between batches to prevent overwhelming APIs
+                await asyncio.sleep(0.5)
             
             # Find reused R values and recover private keys
             await self.find_reused_r_values(scan_id, signatures_by_r)
             
             scan_states[scan_id]["status"] = "completed"
-            await self.add_log(scan_id, f"Scan completed! Found {scan_states[scan_id]['keys_recovered']} private keys", "success")
+            await self.add_log(scan_id, f"Scan completed! Processed {scan_states[scan_id]['blocks_scanned']} blocks, found {scan_states[scan_id]['keys_recovered']} private keys", "success")
             
         except Exception as e:
             logger.error(f"Scan error: {e}")
             scan_states[scan_id]["status"] = "failed"
             await self.add_log(scan_id, f"Scan failed: {str(e)}", "error")
+        finally:
+            # Clean up API session
+            await self.api.close()
+    
+    async def process_single_block(self, semaphore: asyncio.Semaphore, scan_id: str, block_num: int, address_types: List[str]) -> Dict:
+        """Process a single block with concurrency control"""
+        async with semaphore:
+            try:
+                # Get block hash
+                block_hash = await self.api.get_block_hash(block_num)
+                if not block_hash:
+                    await self.add_log(scan_id, f"Failed to get block hash for {block_num}", "warning")
+                    return {'block': block_num, 'signatures': []}
+                
+                # Get transactions in block
+                tx_ids = await self.api.get_block_transactions(block_hash)
+                if not tx_ids:
+                    return {'block': block_num, 'signatures': []}
+                
+                # Process transactions in parallel
+                tx_semaphore = asyncio.Semaphore(5)  # Limit concurrent transactions per block
+                tx_tasks = []
+                
+                for tx_id in tx_ids:
+                    if scan_states[scan_id]["status"] == "stopped":
+                        break
+                    task = self.process_single_transaction(tx_semaphore, tx_id, address_types)
+                    tx_tasks.append(task)
+                
+                # Execute transaction processing in parallel
+                tx_results = await asyncio.gather(*tx_tasks, return_exceptions=True)
+                
+                # Collect all signatures from this block
+                block_signatures = []
+                for result in tx_results:
+                    if isinstance(result, list):
+                        block_signatures.extend(result)
+                
+                return {'block': block_num, 'signatures': block_signatures}
+                
+            except Exception as e:
+                logger.error(f"Error processing block {block_num}: {e}")
+                await self.add_log(scan_id, f"Error processing block {block_num}: {str(e)}", "error")
+                return {'block': block_num, 'signatures': []}
+    
+    async def process_single_transaction(self, semaphore: asyncio.Semaphore, tx_id: str, address_types: List[str]) -> List[Dict]:
+        """Process a single transaction with concurrency control"""
+        async with semaphore:
+            try:
+                # Get transaction details
+                tx_data = await self.api.get_transaction(tx_id)
+                if not tx_data:
+                    return []
+                
+                # Extract signatures from transaction
+                signatures = await self.extract_signatures(tx_data, address_types)
+                return signatures
+                
+            except Exception as e:
+                logger.error(f"Error processing transaction {tx_id}: {e}")
+                return []
     
     async def extract_signatures(self, tx_data: Dict, address_types: List[str]) -> List[Dict]:
         """Extract ECDSA signatures from transaction"""
