@@ -97,15 +97,15 @@ class BlockchainAPI:
     def __init__(self):
         self.blockstream_base = "https://blockstream.info/api"
         self.mempool_base = "https://mempool.space/api"
-        # Temporarily disable CryptoAPIs to debug core issues
-        # self.cryptoapis_base = "https://rest.cryptoapis.io/v2/blockchain-data/bitcoin/mainnet"
-        # self.cryptoapis_key = os.environ.get('CRYPTOAPIS_API_KEY')
+        self.cryptoapis_base = "https://rest.cryptoapis.io/v2/blockchain-data/bitcoin/mainnet"
+        self.cryptoapis_key = os.environ.get('CRYPTOAPIS_API_KEY')
         self.current_api = 0
-        self.rate_limit_semaphore = asyncio.Semaphore(30)  # Moderate concurrency
+        self.rate_limit_semaphore = asyncio.Semaphore(50)  # Higher for CryptoAPIs
         
     def get_next_api(self):
-        """Alternate between the two working APIs"""
+        """Rotate between APIs with preference for CryptoAPIs due to higher limits"""
         apis = [
+            ("cryptoapis", self.cryptoapis_base),  # Prioritize CryptoAPIs for speed
             ("blockstream", self.blockstream_base),
             ("mempool", self.mempool_base)
         ]
