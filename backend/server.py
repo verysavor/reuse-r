@@ -159,6 +159,37 @@ class BlockchainAPI:
                         await asyncio.sleep(1)
                     
             return None
+
+    async def make_parallel_api_request(self, endpoint_func, *args, max_concurrent_per_api: int = 5):
+        """Make requests to all available APIs in parallel and return first successful result"""
+        apis = self.get_available_apis()
+        
+        async def try_api(api_type, api_base, semaphore):
+            async with semaphore:
+                try:
+                    return await endpoint_func(api_type, api_base, *args)
+                except Exception as e:
+                    logger.debug(f"API {api_type} failed for {endpoint_func.__name__}: {e}")
+                    return None
+        
+        # Create tasks for all APIs
+        tasks = [try_api(api_type, api_base, semaphore) for api_type, api_base, semaphore in apis]
+        
+        # Wait for first successful result
+        for completed_task in asyncio.as_completed(tasks):
+            try:
+                result = await completed_task
+                if result is not None:
+                    # Cancel remaining tasks
+                    for task in tasks:
+                        if not task.done():
+                            task.cancel()
+                    return result
+            except Exception as e:
+                logger.debug(f"Task failed in parallel request: {e}")
+                continue
+        
+        return None
     
     async def get_block_height(self) -> int:
         """Get current block height"""
