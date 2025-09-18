@@ -97,25 +97,32 @@ class BlockchainAPI:
     def __init__(self):
         self.blockstream_base = "https://blockstream.info/api"
         self.mempool_base = "https://mempool.space/api"
+        self.cryptoapis_base = "https://rest.cryptoapis.io/v2/blockchain-data/bitcoin/mainnet"
+        self.cryptoapis_key = os.environ.get('CRYPTOAPIS_API_KEY')
         self.current_api = 0
-        self.rate_limit_semaphore = asyncio.Semaphore(20)  # Allow 20 concurrent requests
+        self.rate_limit_semaphore = asyncio.Semaphore(50)  # Increased for CryptoAPIs throughput
         
     def get_next_api(self):
-        """Alternate between the two working APIs"""
-        apis = [self.blockstream_base, self.mempool_base]
-        api = apis[self.current_api % len(apis)]
+        """Rotate between the three APIs with preference for CryptoAPIs due to higher limits"""
+        apis = [
+            ("blockstream", self.blockstream_base),
+            ("mempool", self.mempool_base),
+            ("cryptoapis", self.cryptoapis_base)
+        ]
+        api_type, api_base = apis[self.current_api % len(apis)]
         self.current_api += 1
-        return api
+        return api_type, api_base
         
-    async def make_request(self, url: str, retries: int = 3) -> dict:
-        """Make HTTP request with rate limiting and retries - creates new session per request"""
+    async def make_request(self, url: str, headers: dict = None, retries: int = 3) -> dict:
+        """Make HTTP request with rate limiting and retries"""
         async with self.rate_limit_semaphore:
             timeout = aiohttp.ClientTimeout(total=30)
+            request_headers = headers or {}
             
             for attempt in range(retries):
                 try:
                     async with aiohttp.ClientSession(timeout=timeout) as session:
-                        async with session.get(url) as resp:
+                        async with session.get(url, headers=request_headers) as resp:
                             if resp.status == 200:
                                 if 'application/json' in resp.headers.get('content-type', ''):
                                     return await resp.json()
@@ -126,7 +133,7 @@ class BlockchainAPI:
                                     except:
                                         return text
                             elif resp.status == 429:  # Rate limited
-                                await asyncio.sleep(2 ** attempt)  # Exponential backoff
+                                await asyncio.sleep(2 ** attempt)
                                 continue
                             else:
                                 logger.warning(f"API error {resp.status} for {url}")
