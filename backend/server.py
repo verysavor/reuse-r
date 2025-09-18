@@ -700,6 +700,11 @@ async def update_performance_config(config: ScanPerformanceConfig):
 scanner = RValueScanner()
 
 # API Routes
+@api_router.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {"status": "healthy", "timestamp": datetime.now(timezone.utc).isoformat()}
+
 @api_router.get("/current-height")
 async def get_current_height():
     """Get current blockchain height"""
