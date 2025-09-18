@@ -12,7 +12,7 @@ WDS_SOCKET_PORT=443
 ### ❌ WRONG Setup (Bug that was fixed)
 ```bash
 # This would cause local frontend to hit remote backend - DO NOT USE
-REACT_APP_BACKEND_URL=https://reused-r-finder.preview.emergentagent.com
+REACT_APP_BACKEND_URL=https://btc-sig-analyzer.preview.emergentagent.com
 ```
 
 ## Development Environment Setup
