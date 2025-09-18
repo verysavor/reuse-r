@@ -190,7 +190,14 @@ class BlockchainAPI:
         api_type, api_base = self.get_next_api()
         
         try:
-            if api_type == "cryptoapis" and self.cryptoapis_key:
+            if api_type == "blockchain_info":
+                url = f"{api_base}/block-height/{height}?format=json"
+                result = await self.make_request(url)
+                if result and isinstance(result, dict) and 'blocks' in result:
+                    blocks = result['blocks']
+                    if blocks and len(blocks) > 0:
+                        return blocks[0].get('hash', '')
+            elif api_type == "cryptoapis" and self.cryptoapis_key:
                 url = f"{api_base}/blocks/utxo/bitcoin/mainnet/height/{height}/details"
                 headers = {
                     "x-api-key": self.cryptoapis_key,
@@ -199,13 +206,19 @@ class BlockchainAPI:
                 result = await self.make_request(url, headers)
                 if result and isinstance(result, dict):
                     return result.get('data', {}).get('item', {}).get('hash', '')
-            else:
+            elif api_type == "blockstream":
                 url = f"{api_base}/block-height/{height}"
                 result = await self.make_request(url)
-                if result:
-                    return str(result)
+                if result and isinstance(result, str):
+                    return result
+            elif api_type == "mempool":
+                url = f"{api_base}/block-height/{height}"
+                result = await self.make_request(url)
+                if result and isinstance(result, str):
+                    return result
         except Exception as e:
-            logger.error(f"Error getting block hash for height {height} from {api_type}: {e}")
+            logger.error(f"Error getting block hash: {e}")
+        
         return ""
     
     async def get_block_transactions(self, block_hash: str) -> List[str]:
