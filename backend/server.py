@@ -857,7 +857,7 @@ async def test_cryptoapis():
     try:
         url = f"{api.cryptoapis_base}/blocks/latest"
         headers = {
-            "x-api-key": api.cryptoapis_key,
+            "X-API-Key": api.cryptoapis_key,
             "Content-Type": "application/json"
         }
         
