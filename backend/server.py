@@ -559,7 +559,7 @@ class RValueScanner:
                         
                         # Group signatures by R value
                         for sig in block_signatures:
-                            r_value = sig.get('r_value')
+                            r_value = sig.get('r')
                             if r_value:
                                 if r_value not in signatures_by_r:
                                     signatures_by_r[r_value] = []
