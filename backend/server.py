@@ -91,91 +91,180 @@ logger = logging.getLogger(__name__)
 # Blockchain API helpers
 class BlockchainAPI:
     def __init__(self):
-        self.blockstream_base = "https://blockstream.info/api"
-        self.mempool_base = "https://mempool.space/api"
+        self.api_endpoints = [
+            "https://blockstream.info/api",
+            "https://mempool.space/api",
+            "https://api.blockcypher.com/v1/btc/main",
+            # Add more endpoints as needed
+        ]
+        self.current_endpoint = 0
+        self.rate_limit_semaphore = asyncio.Semaphore(20)  # Allow 20 concurrent requests
+        self.session = None
         
-    async def get_block_height(self) -> int:
-        """Get current block height"""
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(f"{self.blockstream_base}/blocks/tip/height") as resp:
-                    if resp.status == 200:
-                        return int(await resp.text())
-                    raise Exception(f"API error: {resp.status}")
-        except Exception as e:
-            logger.error(f"Error getting block height: {e}")
-            # Fallback to mempool.space
-            try:
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(f"{self.mempool_base}/blocks/tip/height") as resp:
+    async def get_session(self):
+        """Get or create aiohttp session"""
+        if self.session is None:
+            timeout = aiohttp.ClientTimeout(total=30)
+            self.session = aiohttp.ClientSession(timeout=timeout)
+        return self.session
+    
+    def get_next_endpoint(self):
+        """Round-robin through API endpoints"""
+        endpoint = self.api_endpoints[self.current_endpoint % len(self.api_endpoints)]
+        self.current_endpoint += 1
+        return endpoint
+        
+    async def make_request(self, url: str, retries: int = 3) -> dict:
+        """Make HTTP request with rate limiting and retries"""
+        async with self.rate_limit_semaphore:
+            session = await self.get_session()
+            
+            for attempt in range(retries):
+                try:
+                    async with session.get(url) as resp:
                         if resp.status == 200:
-                            return int(await resp.text())
-            except:
-                pass
-            return 0
+                            if 'application/json' in resp.headers.get('content-type', ''):
+                                return await resp.json()
+                            else:
+                                text = await resp.text()
+                                try:
+                                    return int(text) if text.isdigit() else text
+                                except:
+                                    return text
+                        elif resp.status == 429:  # Rate limited
+                            await asyncio.sleep(2 ** attempt)  # Exponential backoff
+                            continue
+                        else:
+                            logger.warning(f"API error {resp.status} for {url}")
+                            
+                except Exception as e:
+                    logger.warning(f"Request failed (attempt {attempt + 1}): {e}")
+                    if attempt < retries - 1:
+                        await asyncio.sleep(1)
+                    
+            return None
+    
+    async def get_block_height(self) -> int:
+        """Get current block height with fallback endpoints"""
+        for endpoint in self.api_endpoints[:2]:  # Try first 2 endpoints
+            try:
+                if "blockcypher" in endpoint:
+                    url = f"{endpoint}"
+                    result = await self.make_request(url)
+                    if result and isinstance(result, dict):
+                        return result.get('height', 0)
+                else:
+                    url = f"{endpoint}/blocks/tip/height"
+                    result = await self.make_request(url)
+                    if result:
+                        return int(result) if isinstance(result, str) else result
+            except Exception as e:
+                logger.error(f"Error getting block height from {endpoint}: {e}")
+                continue
+        return 0
     
     async def get_block_hash(self, height: int) -> str:
-        """Get block hash by height"""
+        """Get block hash by height with load balancing"""
+        endpoint = self.get_next_endpoint()
+        
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(f"{self.blockstream_base}/block-height/{height}") as resp:
-                    if resp.status == 200:
-                        return await resp.text()
-                    raise Exception(f"API error: {resp.status}")
+            if "blockcypher" in endpoint:
+                # BlockCypher has different API structure
+                url = f"{endpoint}/blocks/{height}"
+                result = await self.make_request(url)
+                if result and isinstance(result, dict):
+                    return result.get('hash', '')
+            else:
+                url = f"{endpoint}/block-height/{height}"
+                result = await self.make_request(url)
+                if result:
+                    return str(result)
         except Exception as e:
             logger.error(f"Error getting block hash for height {height}: {e}")
-            return ""
+            
+        return ""
     
     async def get_block_transactions(self, block_hash: str) -> List[str]:
-        """Get transaction IDs in a block"""
+        """Get transaction IDs in a block with load balancing"""
+        endpoint = self.get_next_endpoint()
+        
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(f"{self.blockstream_base}/block/{block_hash}/txids") as resp:
-                    if resp.status == 200:
-                        return await resp.json()
-                    raise Exception(f"API error: {resp.status}")
+            if "blockcypher" in endpoint:
+                # Different endpoint structure
+                url = f"{endpoint}/blocks/{block_hash}?txstart=0&limit=500"
+                result = await self.make_request(url)
+                if result and isinstance(result, dict):
+                    return [tx['hash'] for tx in result.get('txs', [])]
+            else:
+                url = f"{endpoint}/block/{block_hash}/txids"
+                result = await self.make_request(url)
+                if result and isinstance(result, list):
+                    return result
         except Exception as e:
             logger.error(f"Error getting block transactions: {e}")
-            return []
+            
+        return []
     
     async def get_transaction(self, tx_id: str) -> Dict:
-        """Get transaction details"""
+        """Get transaction details with load balancing"""
+        endpoint = self.get_next_endpoint()
+        
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(f"{self.blockstream_base}/tx/{tx_id}") as resp:
-                    if resp.status == 200:
-                        return await resp.json()
-                    raise Exception(f"API error: {resp.status}")
+            url = f"{endpoint}/tx/{tx_id}"
+            result = await self.make_request(url)
+            if result and isinstance(result, dict):
+                return result
         except Exception as e:
             logger.error(f"Error getting transaction {tx_id}: {e}")
-            return {}
+            
+        return {}
     
     async def get_address_balance(self, address: str) -> BalanceCheck:
-        """Get address balance"""
+        """Get address balance with load balancing"""
+        endpoint = self.get_next_endpoint()
+        
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(f"{self.blockstream_base}/address/{address}") as resp:
-                    if resp.status == 200:
-                        data = await resp.json()
-                        funded = data.get('chain_stats', {}).get('funded_txo_sum', 0) / 100000000
-                        spent = data.get('chain_stats', {}).get('spent_txo_sum', 0) / 100000000
-                        unconfirmed_funded = data.get('mempool_stats', {}).get('funded_txo_sum', 0) / 100000000
-                        unconfirmed_spent = data.get('mempool_stats', {}).get('spent_txo_sum', 0) / 100000000
-                        
-                        confirmed_balance = funded - spent
-                        unconfirmed_balance = unconfirmed_funded - unconfirmed_spent
-                        total_balance = confirmed_balance + unconfirmed_balance
-                        
-                        return BalanceCheck(
-                            address=address,
-                            balance=total_balance,
-                            confirmed_balance=confirmed_balance,
-                            unconfirmed_balance=unconfirmed_balance
-                        )
+            if "blockcypher" in endpoint:
+                url = f"{endpoint}/addrs/{address}/balance"
+                result = await self.make_request(url)
+                if result and isinstance(result, dict):
+                    balance = result.get('final_balance', 0) / 100000000
+                    unconfirmed = result.get('unconfirmed_balance', 0) / 100000000
+                    
+                    return BalanceCheck(
+                        address=address,
+                        balance=balance + unconfirmed,
+                        confirmed_balance=balance,
+                        unconfirmed_balance=unconfirmed
+                    )
+            else:
+                url = f"{endpoint}/address/{address}"
+                result = await self.make_request(url)
+                if result and isinstance(result, dict):
+                    funded = result.get('chain_stats', {}).get('funded_txo_sum', 0) / 100000000
+                    spent = result.get('chain_stats', {}).get('spent_txo_sum', 0) / 100000000
+                    unconfirmed_funded = result.get('mempool_stats', {}).get('funded_txo_sum', 0) / 100000000
+                    unconfirmed_spent = result.get('mempool_stats', {}).get('spent_txo_sum', 0) / 100000000
+                    
+                    confirmed_balance = funded - spent
+                    unconfirmed_balance = unconfirmed_funded - unconfirmed_spent
+                    total_balance = confirmed_balance + unconfirmed_balance
+                    
+                    return BalanceCheck(
+                        address=address,
+                        balance=total_balance,
+                        confirmed_balance=confirmed_balance,
+                        unconfirmed_balance=unconfirmed_balance
+                    )
         except Exception as e:
             logger.error(f"Error getting balance for {address}: {e}")
             
         return BalanceCheck(address=address, balance=0.0, confirmed_balance=0.0, unconfirmed_balance=0.0)
+    
+    async def close(self):
+        """Close the session"""
+        if self.session:
+            await self.session.close()
 
 # Cryptographic functions for ECDSA and Bitcoin
 class BitcoinCrypto:
