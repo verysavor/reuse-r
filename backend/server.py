@@ -585,8 +585,7 @@ class RValueScanner:
                     await self.add_log(scan_id, f"Error processing block {current_block}: {str(e)}", "error")
                     scan_states[scan_id]["errors_encountered"] = scan_states[scan_id].get("errors_encountered", 0) + 1
                 
-                # Small delay to prevent overwhelming APIs
-                await asyncio.sleep(0.05)
+                # No delay - maximum speed processing
             
             # Find reused R values and recover private keys
             await self.find_reused_r_values(scan_id, signatures_by_r)
