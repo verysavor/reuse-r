@@ -494,6 +494,15 @@ function App() {
                   </div>
                   <div className="flex space-x-2">
                     <Button
+                      onClick={fetchScanResults}
+                      variant="outline"
+                      size="sm"
+                      className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                    >
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Refresh Results
+                    </Button>
+                    <Button
                       onClick={checkBalances}
                       variant="outline"
                       size="sm"
