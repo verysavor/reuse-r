@@ -161,6 +161,21 @@ backend:
         - working: true
           agent: "main"
           comment: "Core R-value detection logic confirmed working for intra-transaction reuse. Successfully detects reused R-values within single transactions like block 252474"
+        - working: true
+          agent: "testing"
+          comment: "✅ VERIFIED: R-value detection working perfectly with block 252474. Successfully detected 1 reused R-value pair and recovered 1 private key from the known vulnerable transaction. Core cryptographic logic for ECDSA private key recovery from reused nonces is functioning correctly. Parallel processing completed scan in under 2 minutes with 99.8 blocks/min performance."
+
+  - task: "Backend API Endpoints"
+    implemented: true
+    working: true
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ VERIFIED: All key backend endpoints working correctly. GET /api/current-height returns proper blockchain height (915207). POST /api/scan/start successfully initiates scans. GET /api/scan/progress/{scan_id} provides real-time progress updates. GET /api/scan/results/{scan_id} returns scan results with recovered keys. POST /api/balance/check works for address balance verification. GET /api/scan/list shows all scans. Export functionality working. Only minor issue: error handling returns 500 instead of 400 for invalid configs (non-critical)."
 
 frontend:
   - task: "UI Interface for Scanning"
