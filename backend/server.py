@@ -160,7 +160,7 @@ class BlockchainAPI:
         # Try CryptoAPIs first (highest limits) - Get Last Mined Block
         if self.cryptoapis_key:
             try:
-                url = f"{self.cryptoapis_base}/blockchain-data/bitcoin/mainnet/blocks/last"
+                url = f"{self.cryptoapis_base}/blocks/utxo/bitcoin/mainnet/last"
                 headers = {
                     "x-api-key": self.cryptoapis_key,
                     "Content-Type": "application/json"
