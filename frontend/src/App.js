@@ -709,7 +709,7 @@ function App() {
                 <div className="grid grid-cols-3 gap-4">
                   <Card className="bg-slate-700/30 border-slate-600 p-4">
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-blue-400">2</div>
+                      <div className="text-2xl font-bold text-blue-400">3</div>
                       <div className="text-xs text-slate-400">Blockchain APIs</div>
                     </div>
                   </Card>
@@ -721,7 +721,7 @@ function App() {
                   </Card>
                   <Card className="bg-slate-700/30 border-slate-600 p-4">
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-purple-400">30</div>
+                      <div className="text-2xl font-bold text-purple-400">50</div>
                       <div className="text-xs text-slate-400">Concurrent Requests</div>
                     </div>
                   </Card>
