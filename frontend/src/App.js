@@ -638,8 +638,8 @@ function App() {
                 <Alert className="bg-blue-900/30 border-blue-700">
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription className="text-slate-300">
-                    <strong>High-Speed Scanning:</strong> This scanner uses advanced parallel processing with multiple blockchain APIs 
-                    to scan thousands of blocks quickly. Adjust settings below for optimal performance.
+                    <strong>High-Speed Scanning:</strong> This scanner uses advanced parallel processing with 2 reliable blockchain APIs 
+                    (Blockstream & Mempool.space) to scan thousands of blocks quickly. Adjust settings below for optimal performance.
                   </AlertDescription>
                 </Alert>
                 
