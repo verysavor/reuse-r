@@ -148,35 +148,33 @@ class BlockchainAPI:
     
     async def get_block_height(self) -> int:
         """Get current block height"""
-        # Try CryptoAPIs first (highest limits) - Get Last Mined Block
-        if self.cryptoapis_key:
-            try:
-                url = f"{self.cryptoapis_base}/blocks/utxo/bitcoin/mainnet/last"
-                headers = {
-                    "x-api-key": self.cryptoapis_key,
-                    "Content-Type": "application/json"
-                }
-                result = await self.make_request(url, headers)
-                if result and isinstance(result, dict):
-                    return result.get('data', {}).get('item', {}).get('height', 0)
-            except Exception as e:
-                logger.error(f"Error getting block height from CryptoAPIs: {e}")
+        # Try blockchain.info API first since it's working reliably
+        try:
+            url = f"{self.blockchain_info_base}/q/getblockcount"
+            result = await self.make_request(url)
+            if result and isinstance(result, int):
+                return result
+        except Exception as e:
+            logger.error(f"Error getting block height from blockchain.info: {e}")
         
-        # Fallback to other APIs
+        # Try Blockstream API
         try:
             url = f"{self.blockstream_base}/blocks/tip/height"
             result = await self.make_request(url)
-            if result:
-                return int(result) if isinstance(result, str) else result
+            if result and isinstance(result, int):
+                return result
         except Exception as e:
-            logger.error(f"Error getting block height: {e}")
-            try:
-                url = f"{self.mempool_base}/blocks/tip/height"
-                result = await self.make_request(url)
-                if result:
-                    return int(result) if isinstance(result, str) else result
-            except:
-                pass
+            logger.error(f"Error getting block height from Blockstream: {e}")
+        
+        # Try Mempool.space API
+        try:
+            url = f"{self.mempool_base}/blocks/tip/height"
+            result = await self.make_request(url)
+            if result and isinstance(result, int):
+                return result
+        except Exception as e:
+            logger.error(f"Error getting block height from Mempool: {e}")
+        
         return 0
     
     async def get_block_hash(self, height: int) -> str:
