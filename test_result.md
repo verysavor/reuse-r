@@ -252,9 +252,13 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Scan Progress System Testing"
+    - "Progress Display System"
+    - "Results Display System"
+    - "API Integration Display"
   stuck_tasks:
-    []
+    - "Progress Display System"
+    - "Results Display System"
+    - "API Integration Display"
   test_all: false
   test_priority: "high_first"
 
